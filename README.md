@@ -39,13 +39,12 @@ git clone https://github.com/olinll/privalk.git
 cd privalk
 
 # Linux / macOS
-chmod +x privalk.sh
-./privalk.sh install    # 安装依赖并构建
-./privalk.sh start      # 启动服务
+bash privalk.sh install    # 安装依赖并构建
+bash privalk.sh start      # 启动服务
 
 # Windows
-privalk.cmd install     # 安装依赖并构建
-privalk.cmd start       # 启动服务
+privalk.cmd install        # 安装依赖并构建
+privalk.cmd start          # 启动服务
 ```
 
 **管理脚本命令：**
