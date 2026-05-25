@@ -1,0 +1,10 @@
+node_modules/
+npm-debug.log
+channels.json
+.env
+.env.*
+*.pem
+key.pem
+cert.pem
+dist/
+uploads/

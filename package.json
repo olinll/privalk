@@ -1,0 +1,25 @@
+{
+  "name": "privalk",
+  "version": "2.0.0",
+  "description": "私密语音和文字聊天应用，支持文件分享",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && xcopy /E /I /Y src\\public dist\\public",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "socket.io": "^4.7.4"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/multer": "^1.4.11",
+    "@types/node": "^20.11.5",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2"
+  }
+}
+

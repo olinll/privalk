@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Privalk - 私密语音聊天</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <script src="/js/tailwind.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'squawk-bg': '#0b0d14',
+            'squawk-bg2': '#10121a',
+            'squawk-bg3': '#161922',
+            'squawk-card': 'rgba(255,255,255,0.04)',
+            'squawk-card-hover': 'rgba(255,255,255,0.07)',
+            'squawk-border': 'rgba(255,255,255,0.07)',
+            'squawk-border2': 'rgba(255,255,255,0.12)',
+            'squawk-text': '#ffffff',
+            'squawk-text-mid': '#8b8fa8',
+            'squawk-text-dim': '#4a4d62',
+            'squawk-blue': '#4f7dff',
+            'squawk-blue2': '#6b93ff',
+            'squawk-blue-glow': '#4f7dff30',
+            'squawk-blue-soft': '#4f7dff18',
+            'squawk-red': '#ff5c7a',
+            'squawk-green': '#2dd4a0',
+            'squawk-gold': '#f59e0b',
+          },
+          fontFamily: {
+            'sans': ['Plus Jakarta Sans', 'Noto Sans SC', 'sans-serif'],
+          },
+          animation: {
+            'wave-idle': 'wave-idle 1.2s ease-in-out infinite',
+            'wave-big': 'wave-big 1.4s ease-in-out infinite',
+            'pulse-dot': 'pulse-dot 2.5s infinite',
+            'record-pulse': 'record-pulse 2s ease-in-out infinite',
+            'speak-ring': 'speak-ring 1s ease-out infinite',
+            'msg-in': 'msg-in 0.2s ease',
+            'ctx-in': 'ctx-in 0.12s ease',
+            'toast-in': 'toast-in 0.25s ease',
+            'toast-out': 'toast-out 0.25s ease 2.75s forwards',
+            'fade-up': 'fade-up 0.4s ease both',
+          },
+          keyframes: {
+            'wave-idle': { '0%,100%': { transform: 'scaleY(1)' }, '50%': { transform: 'scaleY(0.5)' } },
+            'wave-big': { '0%,100%': { transform: 'scaleY(1)', opacity: '0.7' }, '50%': { transform: 'scaleY(0.4)', opacity: '1' } },
+            'pulse-dot': { '0%,100%': { opacity: '1' }, '50%': { opacity: '0.4' } },
+            'record-pulse': { '0%,100%': { transform: 'scale(1)', opacity: '1' }, '50%': { transform: 'scale(1.08)', opacity: '0.5' } },
+            'speak-ring': { '0%': { transform: 'scale(0.9)', opacity: '0.6' }, '100%': { transform: 'scale(1.3)', opacity: '0' } },
+            'msg-in': { from: { opacity: '0', transform: 'translateY(6px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+            'ctx-in': { from: { opacity: '0', transform: 'scale(0.95)' }, to: { opacity: '1', transform: 'scale(1)' } },
+            'toast-in': { from: { opacity: '0', transform: 'translateX(14px)' }, to: { opacity: '1', transform: 'translateX(0)' } },
+            'toast-out': { to: { opacity: '0', transform: 'translateX(14px)' } },
+            'fade-up': { from: { opacity: '0', transform: 'translateY(16px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height:100%; overflow:hidden; }
+    body::before {
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+      background:
+        radial-gradient(ellipse 60% 40% at 80% 10%, rgba(79,125,255,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 20% 80%, rgba(79,125,255,0.05) 0%, transparent 60%);
+    }
+    #app { display:grid; grid-template-columns:240px 1fr; grid-template-rows:64px 1fr 72px; height:100vh; position:relative; z-index:1; grid-template-areas:"header header" "sidebar main" "controls controls"; }
+    #sidebar { grid-area:sidebar; }
+    #main { grid-area:main; }
+    #controls { grid-area:controls; }
+    #header { grid-area:header; }
+
+    .room-item.active::before { content:''; position:absolute; left:0; top:6px; bottom:6px; width:3px; border-radius:0 3px 3px 0; background:var(--tw-color-squawk-blue,#4f7dff); }
+
+    @media(max-width:768px){
+      #app { grid-template-columns:1fr; grid-template-rows:64px 1fr 72px; grid-template-areas:"header" "main" "controls"; }
+      #sidebar { display:none; position:fixed; top:64px; left:0; bottom:72px; width:240px; z-index:100; box-shadow:4px 0 20px rgba(0,0,0,0.5); }
+      #sidebar.open { display:flex; }
+    }
+  </style>
+</head>
+<body class="bg-squawk-bg text-squawk-text font-sans">
+<div id="app">
+  <!-- 头部 -->
+  <header id="header" class="flex items-center px-6 bg-squawk-bg/80 backdrop-blur-xl border-b border-squawk-border gap-3">
+    <button class="md:hidden flex items-center justify-center w-9 h-9 rounded-lg bg-squawk-bg3 border border-squawk-border text-squawk-text-mid cursor-pointer" id="menu-btn">☰</button>
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-squawk-blue to-purple-500 flex items-center justify-center shadow-lg shadow-squawk-blue-glow">
+        <div class="flex items-center gap-0.5 h-[18px]">
+          <span class="block w-[2.5px] rounded-sm bg-white animate-wave-idle h-[6px]" style="animation-delay:0s"></span>
+          <span class="block w-[2.5px] rounded-sm bg-white animate-wave-idle h-[12px]" style="animation-delay:0.1s"></span>
+          <span class="block w-[2.5px] rounded-sm bg-white animate-wave-idle h-[18px]" style="animation-delay:0.2s"></span>
+          <span class="block w-[2.5px] rounded-sm bg-white animate-wave-idle h-[10px]" style="animation-delay:0.3s"></span>
+          <span class="block w-[2.5px] rounded-sm bg-white animate-wave-idle h-[6px]" style="animation-delay:0.4s"></span>
+        </div>
+      </div>
+      <div class="text-lg font-extrabold tracking-tight">Privalk</div>
+    </div>
+    <div class="ml-auto flex items-center gap-2.5">
+      <div class="flex items-center gap-1.5 bg-squawk-card border border-squawk-border rounded-full py-1 px-3 text-[11px] font-semibold text-squawk-text-mid">
+        <div class="w-1.5 h-1.5 rounded-full bg-squawk-green shadow-[0_0_6px_var(--tw-color-squawk-green)] animate-pulse-dot"></div>
+        <span id="conn-status">连接中</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 侧边栏 -->
+  <nav id="sidebar" class="flex flex-col gap-1 overflow-hidden bg-squawk-bg2 border-r border-squawk-border p-3.5">
+    <div class="text-[10px] font-bold tracking-[0.12em] uppercase text-squawk-text-dim px-2.5 mb-1.5 flex items-center justify-between">
+      频道
+      <button class="w-5 h-5 rounded-md bg-squawk-blue border-none text-white text-sm font-bold cursor-pointer flex items-center justify-center transition-all hover:bg-squawk-blue2 hover:scale-110 shadow-md shadow-squawk-blue-glow leading-none" id="open-create-modal">+</button>
+    </div>
+    <div id="room-list" class="flex-1 overflow-y-auto flex flex-col gap-0.5">
+      <div class="text-center py-8 px-3 text-squawk-text-dim text-xs leading-relaxed">
+        <strong class="block text-sm text-squawk-text-mid font-bold mb-1">暂无频道</strong>
+        点击 + 创建一个频道
+      </div>
+    </div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main id="main" class="flex flex-col items-center justify-center p-8 relative overflow-hidden bg-squawk-bg">
+    <!-- 欢迎屏幕 -->
+    <div id="welcome-screen" class="relative z-10 text-center max-w-[400px] animate-fade-up">
+      <div class="flex items-center justify-center gap-1.5 h-16 mb-6">
+        <span class="block w-[5px] rounded bg-gradient-to-t from-squawk-blue to-purple-500 animate-wave-big h-5" style="animation-delay:0s"></span>
+        <span class="block w-[5px] rounded bg-gradient-to-t from-squawk-blue to-purple-500 animate-wave-big h-9" style="animation-delay:0.1s"></span>
+        <span class="block w-[5px] rounded bg-gradient-to-t from-squawk-blue to-purple-500 animate-wave-big h-[52px]" style="animation-delay:0.2s"></span>
+        <span class="block w-[5px] rounded bg-gradient-to-t from-squawk-blue to-purple-500 animate-wave-big h-16" style="animation-delay:0.3s"></span>
+        <span class="block w-[5px] rounded bg-gradient-to-t from-squawk-blue to-purple-500 animate-wave-big h-[52px]" style="animation-delay:0.4s"></span>
+        <span class="block w-[5px] rounded bg-gradient-to-t from-squawk-blue to-purple-500 animate-wave-big h-9" style="animation-delay:0.5s"></span>
+        <span class="block w-[5px] rounded bg-gradient-to-t from-squawk-blue to-purple-500 animate-wave-big h-5" style="animation-delay:0.6s"></span>
+      </div>
+      <div class="text-[13px] font-semibold text-squawk-text-mid mb-1.5">很高兴见到你</div>
+      <div class="text-[34px] font-extrabold tracking-tight leading-tight mb-7">
+        来看看<span class="text-squawk-blue">Privalk</span><br>能做什么
+      </div>
+      <div class="bg-squawk-bg3 border border-squawk-border rounded-2xl p-5 flex flex-col gap-3 shadow-2xl shadow-black/30">
+        <div class="text-[11px] font-bold text-squawk-text-dim tracking-[0.08em] uppercase text-left">你的昵称</div>
+        <input class="w-full bg-white/5 border border-squawk-border2 rounded-xl py-3 px-4 text-squawk-text font-medium text-sm outline-none transition-all focus:border-squawk-blue focus:shadow-[0_0_0_3px_var(--tw-color-squawk-blue-soft)] focus:bg-squawk-blue/5 placeholder:text-squawk-text-dim placeholder:font-normal" id="name-input" placeholder="例如：大神、小明、高手..." maxlength="24"/>
+        <button class="bg-squawk-blue text-white text-sm font-bold border-none rounded-xl py-3 px-7 cursor-pointer transition-all hover:bg-squawk-blue2 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-squawk-blue-glow active:translate-y-0 disabled:opacity-35 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none" id="save-name-btn">开始 →</button>
+      </div>
+    </div>
+
+    <!-- 频道屏幕 -->
+    <div id="room-screen" class="hidden relative z-10 w-full h-full flex-row">
+      <!-- 语音面板 -->
+      <div class="flex-[0_0_280px] flex flex-col items-center justify-center gap-5 p-7 border-r border-squawk-border">
+        <div class="text-center">
+          <div class="text-[10px] font-bold tracking-[0.12em] uppercase text-squawk-text-dim mb-1">当前在</div>
+          <div class="flex items-center justify-center gap-2">
+            <div class="text-[22px] font-extrabold tracking-tight" id="current-room-name"></div>
+            <div class="hidden text-[11px] font-bold text-squawk-gold bg-squawk-gold/10 border border-squawk-gold/25 rounded-md py-0.5 px-1.5 whitespace-nowrap" id="owner-badge">👑 频道主</div>
+          </div>
+        </div>
+        <div id="users-grid" class="flex flex-wrap gap-2.5 justify-center"></div>
+        <div class="flex flex-col items-center gap-2.5">
+          <button class="w-[60px] h-[60px] rounded-full bg-squawk-blue border-none flex items-center justify-center cursor-pointer transition-all shadow-[0_0_0_8px_var(--tw-color-squawk-blue-soft),0_8px_28px_var(--tw-color-squawk-blue-glow)] text-[22px] relative disabled:opacity-30 disabled:cursor-not-allowed hover:bg-squawk-blue2 hover:scale-105" id="orb-btn" disabled>
+            🎤
+            <div class="absolute inset-[-8px] rounded-full border border-squawk-blue/20 animate-record-pulse"></div>
+          </button>
+          <div class="text-[11px] font-semibold text-squawk-text-dim" id="record-label">点击静音</div>
+        </div>
+      </div>
+
+      <!-- 移动端标签 -->
+      <div class="hidden absolute bottom-0 left-0 right-0 bg-squawk-bg2 border-t border-squawk-border z-10 h-12" id="mobile-tabs">
+        <button class="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold text-squawk-text-dim cursor-pointer border-none bg-none transition-colors active:text-squawk-blue" id="tab-voice" onclick="switchTab('voice')">🎤 语音</button>
+        <button class="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold text-squawk-text-dim cursor-pointer border-none bg-none transition-colors active:text-squawk-blue" id="tab-chat" onclick="switchTab('chat')">💬 聊天</button>
+      </div>
+
+      <!-- 聊天面板 -->
+      <div class="flex-1 flex flex-col min-w-0">
+        <div class="py-3.5 px-5 border-b border-squawk-border flex items-center gap-2 bg-squawk-bg2 shrink-0">
+          <div class="w-1.5 h-1.5 rounded-full bg-squawk-blue shadow-[0_0_6px_var(--tw-color-squawk-blue)]"></div>
+          <div class="text-[13px] font-bold text-squawk-text-mid">频道聊天</div>
+        </div>
+        <div id="chat-messages" class="flex-1 overflow-y-auto py-4 px-5 flex flex-col gap-1">
+          <div class="flex-1 flex flex-col items-center justify-center text-squawk-text-dim gap-2.5">
+            <div class="text-4xl opacity-30">💬</div>
+            <div class="text-sm font-semibold">暂无消息</div>
+          </div>
+        </div>
+        <div id="typing-indicator" class="py-1 px-5 text-[11px] text-squawk-text-dim italic min-h-[22px] shrink-0 font-medium"></div>
+        <div class="py-3 px-4 border-t border-squawk-border flex gap-2.5 items-end bg-squawk-bg2 shrink-0">
+          <input type="file" id="file-input" class="hidden" accept="image/*,video/*,audio/*,.pdf,.zip,.rar,.doc,.docx,.txt">
+          <button class="w-[38px] h-[38px] rounded-xl border border-squawk-border bg-squawk-bg3 text-squawk-text-mid text-base cursor-pointer flex items-center justify-center transition-all hover:border-squawk-blue hover:text-squawk-blue hover:bg-squawk-blue-soft disabled:opacity-20 disabled:cursor-not-allowed shrink-0" id="file-btn" disabled title="发送文件">📎</button>
+          <button class="w-[38px] h-[38px] rounded-xl border border-squawk-border bg-squawk-bg3 text-squawk-text-mid text-base cursor-pointer flex items-center justify-center transition-all hover:border-squawk-blue hover:text-squawk-blue hover:bg-squawk-blue-soft disabled:opacity-20 disabled:cursor-not-allowed shrink-0" id="emoji-btn" disabled title="表情">😊</button>
+          <textarea id="chat-input" class="flex-1 bg-white/5 border border-squawk-border2 rounded-xl py-2.5 px-4 text-squawk-text text-[13px] font-medium outline-none resize-none max-h-[100px] transition-all focus:border-squawk-blue focus:shadow-[0_0_0_3px_var(--tw-color-squawk-blue-soft)] leading-relaxed disabled:opacity-30 disabled:cursor-not-allowed placeholder:text-squawk-text-dim placeholder:font-normal" placeholder="发送消息..." rows="1" disabled></textarea>
+          <button class="w-[38px] h-[38px] rounded-xl bg-squawk-blue border-none text-white text-base cursor-pointer flex items-center justify-center transition-all shadow-md shadow-squawk-blue-glow shrink-0 hover:bg-squawk-blue2 hover:scale-105 disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none" id="send-btn" disabled>↑</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 底部控制栏 -->
+  <footer id="controls" class="bg-squawk-bg2 border-t border-squawk-border flex items-center px-5 gap-2.5">
+    <div class="flex items-center gap-2.5 flex-1 min-w-0">
+      <div class="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-lg shrink-0 bg-squawk-bg3 border border-squawk-border" id="self-avatar">👤</div>
+      <div>
+        <div class="flex items-center gap-1"><div class="text-[13px] font-bold truncate" id="self-name-display">未设置</div><button class="bg-none border-none text-squawk-text-dim text-xs cursor-pointer p-0.5 rounded transition-colors hover:text-squawk-blue leading-none" id="edit-name-btn" title="修改昵称">✏️</button></div>
+        <div class="text-[10px] text-squawk-text-dim mt-px font-medium" id="self-status">空闲</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="w-[38px] h-[38px] rounded-xl border border-squawk-border bg-squawk-bg3 text-squawk-text-mid text-base cursor-pointer flex items-center justify-center transition-all hover:border-squawk-blue hover:text-squawk-blue hover:bg-squawk-blue-soft disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:border-squawk-border disabled:hover:text-squawk-text-mid disabled:hover:bg-squawk-bg3" id="mute-btn" disabled>🎤</button>
+      <button class="w-[38px] h-[38px] rounded-xl border border-squawk-border bg-squawk-bg3 text-squawk-text-mid text-base cursor-pointer flex items-center justify-center transition-all hover:border-squawk-red hover:text-squawk-red hover:bg-squawk-red/10 disabled:opacity-20 disabled:cursor-not-allowed" id="leave-btn" disabled>👋</button>
+    </div>
+  </footer>
+</div>
+
+<!-- 频道右键菜单 -->
+<div class="hidden fixed bg-squawk-bg3 border border-squawk-border2 rounded-xl p-1 shadow-2xl shadow-black/50 z-[3000] min-w-[170px] animate-ctx-in" id="ctx-channel">
+  <div class="text-[10px] font-bold tracking-[0.1em] uppercase text-squawk-text-dim py-1.5 px-3">频道</div>
+  <button class="flex items-center gap-2.5 py-2 px-3 rounded-lg cursor-pointer text-[13px] font-semibold text-squawk-text-mid transition-all hover:bg-squawk-card-hover hover:text-squawk-text border-none bg-none w-full text-left" id="ctx-rename"><span class="text-sm">✏️</span>重命名频道</button>
+  <div class="h-px bg-squawk-border my-1"></div>
+  <button class="flex items-center gap-2.5 py-2 px-3 rounded-lg cursor-pointer text-[13px] font-semibold text-squawk-text-mid transition-all hover:bg-squawk-red/10 hover:text-squawk-red border-none bg-none w-full text-left" id="ctx-delete"><span class="text-sm">🗑️</span>删除频道</button>
+</div>
+
+<!-- 用户右键菜单 -->
+<div class="hidden fixed bg-squawk-bg3 border border-squawk-border2 rounded-xl p-1 shadow-2xl shadow-black/50 z-[3000] min-w-[170px] animate-ctx-in" id="ctx-user">
+  <div class="text-[10px] font-bold tracking-[0.1em] uppercase text-squawk-text-dim py-1.5 px-3">用户</div>
+  <button class="flex items-center gap-2.5 py-2 px-3 rounded-lg cursor-pointer text-[13px] font-semibold text-squawk-text-mid transition-all hover:bg-squawk-red/10 hover:text-squawk-red border-none bg-none w-full text-left" id="ctx-kick"><span class="text-sm">🚪</span>踢出用户</button>
+</div>
+
+<!-- 重命名频道弹窗 -->
+<div class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] backdrop-blur-[10px]" id="rename-modal">
+  <div class="bg-squawk-bg3 border border-squawk-border2 rounded-[20px] p-6 w-[360px] flex flex-col gap-3.5 shadow-2xl shadow-black/50">
+    <div class="text-xl font-extrabold tracking-tight">重命名<span class="text-squawk-blue">频道</span></div>
+    <div class="text-[11px] font-bold text-squawk-text-dim tracking-[0.08em] uppercase">新名称</div>
+    <input class="w-full bg-white/5 border border-squawk-border2 rounded-xl py-3 px-4 text-squawk-text font-medium text-sm outline-none transition-all focus:border-squawk-blue focus:shadow-[0_0_0_3px_var(--tw-color-squawk-blue-soft)] focus:bg-squawk-blue/5 placeholder:text-squawk-text-dim placeholder:font-normal" id="rename-input" placeholder="输入新的频道名称..." maxlength="32"/>
+    <div class="flex gap-2 mt-1">
+      <button class="flex-1 bg-white/5 border border-squawk-border rounded-xl text-squawk-text-mid text-[13px] font-bold py-3 cursor-pointer transition-all hover:border-squawk-border2 hover:text-squawk-text" id="cancel-rename">取消</button>
+      <button class="flex-1 bg-squawk-blue text-white text-[13px] font-bold border-none rounded-xl py-3 cursor-pointer transition-all hover:bg-squawk-blue2 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-squawk-blue-glow" id="confirm-rename">重命名 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- 重命名用户弹窗 -->
+<div class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] backdrop-blur-[10px]" id="rename-user-modal">
+  <div class="bg-squawk-bg3 border border-squawk-border2 rounded-[20px] p-6 w-[360px] flex flex-col gap-3.5 shadow-2xl shadow-black/50">
+    <div class="text-xl font-extrabold tracking-tight">修改<span class="text-squawk-blue">昵称</span></div>
+    <div class="text-[11px] font-bold text-squawk-text-dim tracking-[0.08em] uppercase">新昵称</div>
+    <input class="w-full bg-white/5 border border-squawk-border2 rounded-xl py-3 px-4 text-squawk-text font-medium text-sm outline-none transition-all focus:border-squawk-blue focus:shadow-[0_0_0_3px_var(--tw-color-squawk-blue-soft)] focus:bg-squawk-blue/5 placeholder:text-squawk-text-dim placeholder:font-normal" id="rename-user-input" placeholder="输入新昵称..." maxlength="24"/>
+    <div class="flex gap-2 mt-1">
+      <button class="flex-1 bg-white/5 border border-squawk-border rounded-xl text-squawk-text-mid text-[13px] font-bold py-3 cursor-pointer transition-all hover:border-squawk-border2 hover:text-squawk-text" id="cancel-rename-user">取消</button>
+      <button class="flex-1 bg-squawk-blue text-white text-[13px] font-bold border-none rounded-xl py-3 cursor-pointer transition-all hover:bg-squawk-blue2 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-squawk-blue-glow" id="confirm-rename-user">保存 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- 创建频道弹窗 -->
+<div class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] backdrop-blur-[10px]" id="create-modal">
+  <div class="bg-squawk-bg3 border border-squawk-border2 rounded-[20px] p-6 w-[360px] flex flex-col gap-3.5 shadow-2xl shadow-black/50">
+    <div class="text-xl font-extrabold tracking-tight">新建<span class="text-squawk-blue">频道</span></div>
+    <div class="text-[11px] font-bold text-squawk-text-dim tracking-[0.08em] uppercase">频道名称</div>
+    <input class="w-full bg-white/5 border border-squawk-border2 rounded-xl py-3 px-4 text-squawk-text font-medium text-sm outline-none transition-all focus:border-squawk-blue focus:shadow-[0_0_0_3px_var(--tw-color-squawk-blue-soft)] focus:bg-squawk-blue/5 placeholder:text-squawk-text-dim placeholder:font-normal" id="new-room-input" placeholder="例如：游戏、闲聊、排位..." maxlength="32"/>
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" id="default-muted-checkbox" class="w-4 h-4 rounded border-squawk-border2 bg-white/5 text-squawk-blue focus:ring-squawk-blue focus:ring-offset-0">
+      <span class="text-[13px] font-medium text-squawk-text-mid">加入时默认静音</span>
+    </label>
+    <div class="flex gap-2 mt-1">
+      <button class="flex-1 bg-white/5 border border-squawk-border rounded-xl text-squawk-text-mid text-[13px] font-bold py-3 cursor-pointer transition-all hover:border-squawk-border2 hover:text-squawk-text" id="cancel-create">取消</button>
+      <button class="flex-1 bg-squawk-blue text-white text-[13px] font-bold border-none rounded-xl py-3 cursor-pointer transition-all hover:bg-squawk-blue2 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-squawk-blue-glow" id="confirm-create">创建 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- 表情选择器弹窗 -->
+<div class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] backdrop-blur-[10px]" id="emoji-modal">
+  <div class="bg-squawk-bg3 border border-squawk-border2 rounded-[20px] p-6 w-[360px] flex flex-col gap-3.5 shadow-2xl shadow-black/50">
+    <div class="text-xl font-extrabold tracking-tight">选择<span class="text-squawk-blue">表情</span></div>
+    <div class="grid grid-cols-8 gap-2 max-h-[300px] overflow-y-auto">
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😀')">😀</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😂')">😂</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😍')">😍</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🤔')">🤔</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😎')">😎</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🥳')">🥳</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😴')">😴</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😭')">😭</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😡')">😡</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🥺')">🥺</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🤡')">🤡</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('💀')">💀</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('👻')">👻</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎃')">🎃</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🔥')">🔥</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('❤️')">❤️</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('👍')">👍</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('👎')">👎</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('👋')">👋</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🤝')">🤝</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('✌️')">✌️</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🤞')">🤞</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('💪')">💪</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎉')">🎉</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎮')">🎮</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertDice('🎲')">🎲</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🏆')">🏆</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('💯')">💯</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('⚡')">⚡</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎵')">🎵</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎬')">🎬</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('📱')">📱</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('💻')">💻</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎧')">🎧</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎤')">🎤</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('📹')">📹</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🍕')">🍕</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🍺')">🍺</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('☕')">☕</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🐱')">🐱</button>
+      <button class="text-2xl p-2 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🐶')">🐶</button>
+    </div>
+    <div class="flex gap-2 mt-1">
+      <button class="flex-1 bg-white/5 border border-squawk-border rounded-xl text-squawk-text-mid text-[13px] font-bold py-3 cursor-pointer transition-all hover:border-squawk-border2 hover:text-squawk-text" id="cancel-emoji">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="fixed bottom-[84px] right-[18px] flex flex-col gap-2 z-[2000] pointer-events-none"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ── 状态 ──
+let socket, userName=localStorage.getItem('squawk-name')||'', currentRoom=null, currentOwner=null, isMuted=false, localStream=null;
+const peers={}, ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
+const audioCtx=new AudioContext(), analyserNodes={};
+let selfAnalyser=null, typingTimer=null, isTypingNow=false;
+
+const $=id=>document.getElementById(id);
+const welcomeScreen=$('welcome-screen'), roomScreen=$('room-screen');
+const nameInput=$('name-input'), saveNameBtn=$('save-name-btn');
+const selfNameDisp=$('self-name-display'), selfAvatarEl=$('self-avatar');
+const selfStatus=$('self-status'), muteBtn=$('mute-btn'), leaveBtn=$('leave-btn');
+const roomList=$('room-list'), usersGrid=$('users-grid');
+const createModal=$('create-modal'), newRoomInput=$('new-room-input');
+const renameModal=$('rename-modal'), renameInput=$('rename-input');
+const orbBtn=$('orb-btn'), chatInput=$('chat-input'), sendBtn=$('send-btn');
+const chatMessages=$('chat-messages'), typingIndicator=$('typing-indicator');
+const ownerBadge=$('owner-badge');
+const ctxChannel=$('ctx-channel'), ctxUser=$('ctx-user');
+
+// ── 辅助函数 ──
+const EMOJIS=['🦊','🐺','🐯','🦁','🐻','🐼','🐨','🦝','🐸','🦄','🐙','🦋','🦅','🐬','🦁'];
+const COLORS=[['#6366f1','#8b5cf6'],['#3b82f6','#06b6d4'],['#f59e0b','#ef4444'],['#10b981','#3b82f6'],['#ec4899','#f43f5e'],['#8b5cf6','#6366f1']];
+function nameHash(n){let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))>>>0;return h;}
+function nameEmoji(n){return EMOJIS[nameHash(n)%EMOJIS.length];}
+function nameColor(n){return COLORS[nameHash(n)%COLORS.length];}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function formatTime(ts){const d=new Date(ts);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
+function toast(msg,type=''){const t=document.createElement('div');t.className=`px-3.5 py-2.5 bg-squawk-bg3 border border-squawk-border2 rounded-xl text-xs font-semibold shadow-lg shadow-black/40 animate-toast-in ${type==='error'?'border-squawk-red/40 text-squawk-red':'border-squawk-blue/40 text-squawk-blue2'}`;t.textContent=msg;$('toast-container').appendChild(t);setTimeout(()=>t.remove(),3100);}
+function isOwner(){return userName===currentOwner;}
+function updateOwnerUI(){ownerBadge.classList.toggle('hidden',!isOwner());}
+
+// ── 昵称 ──
+function applyName(name){
+  userName=name; selfNameDisp.textContent=name; selfAvatarEl.textContent=nameEmoji(name);
+  if(name) welcomeScreen.style.display='none';
+}
+if(userName){nameInput.value=userName;applyName(userName);}
+saveNameBtn.addEventListener('click',()=>{const n=nameInput.value.trim();if(!n)return toast('请先输入昵称','error');localStorage.setItem('squawk-name',n);applyName(n);toast(`欢迎，${n}！`,'success');});
+nameInput.addEventListener('keydown',e=>{if(e.key==='Enter')saveNameBtn.click();});
+$('menu-btn').addEventListener('click',()=>$('sidebar').classList.toggle('open'));
+
+// ── 右键菜单 ──
+let ctxRoomId=null, ctxTargetSocketId=null, ctxTargetName=null, longPressTimer=null;
+
+function showMenu(menu,e){
+  [ctxChannel,ctxUser].forEach(m=>m.classList.add('hidden'));
+  menu.classList.remove('hidden');
+  const x=Math.min((e.clientX||e.touches?.[0]?.clientX||0),window.innerWidth-190);
+  const y=Math.min((e.clientY||e.touches?.[0]?.clientY||0),window.innerHeight-120);
+  menu.style.left=x+'px'; menu.style.top=y+'px';
+}
+function hideMenus(){ctxChannel.classList.add('hidden');ctxUser.classList.add('hidden');ctxRoomId=null;ctxTargetSocketId=null;ctxTargetName=null;}
+document.addEventListener('click',hideMenus);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')hideMenus();});
+
+$('ctx-rename').addEventListener('click',()=>{
+  if(!ctxRoomId||!isOwner())return;
+  renameInput.value=ctxRoomId;
+  renameModal.classList.remove('hidden');
+  renameInput.focus(); renameInput.select();
+  hideMenus();
+});
+$('ctx-delete').addEventListener('click',()=>{
+  if(!ctxRoomId||!isOwner())return;
+  socket.emit('delete-channel',{roomId:ctxRoomId},res=>{
+    if(res.error)return toast(res.error,'error');
+    toast('频道已删除','success');
+    if(currentRoom===ctxRoomId)leaveRoom();
+  });
+  hideMenus();
+});
+
+$('ctx-kick').addEventListener('click',()=>{
+  if(!ctxTargetSocketId||!isOwner())return;
+  socket.emit('kick-user',{targetSocketId:ctxTargetSocketId},res=>{
+    if(res.error)return toast(res.error,'error');
+    toast(`已踢出 ${escHtml(ctxTargetName)}`,'success');
+  });
+  hideMenus();
+});
+
+$('cancel-rename').addEventListener('click',()=>renameModal.classList.add('hidden'));
+$('confirm-rename').addEventListener('click',doRename);
+renameInput.addEventListener('keydown',e=>{if(e.key==='Enter')doRename();});
+function doRename(){
+  const n=renameInput.value.trim(); if(!n)return toast('请输入名称','error');
+  socket.emit('rename-channel',{roomId:currentRoom||ctxRoomId,newName:n},res=>{
+    if(res.error)return toast(res.error,'error');
+    renameModal.classList.add('hidden');
+    toast('频道已重命名','success');
+  });
+}
+
+// ── 移动端标签切换 ──
+function switchTab(tab){
+  if(tab==='chat'){roomScreen.classList.add('show-chat');$('tab-chat').classList.add('active');$('tab-voice').classList.remove('active');scrollChat();}
+  else{roomScreen.classList.remove('show-chat');$('tab-voice').classList.add('active');$('tab-chat').classList.remove('active');}
+}
+
+// ── Socket连接 ──
+socket=io();
+
+$('edit-name-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  $('rename-user-input').value = userName;
+  $('rename-user-modal').classList.remove('hidden');
+  $('rename-user-input').focus();
+  $('rename-user-input').select();
+});
+$('cancel-rename-user').addEventListener('click', (e) => {
+  e.stopPropagation();
+  $('rename-user-modal').classList.add('hidden');
+});
+$('confirm-rename-user').addEventListener('click', (e) => {
+  e.stopPropagation();
+  doRenameUser();
+});
+$('rename-user-modal').addEventListener('click', (e) => e.stopPropagation());
+$('rename-user-input').addEventListener('keydown', e => { if (e.key === 'Enter') doRenameUser(); });
+
+function doRenameUser() {
+  const n = $('rename-user-input').value.trim();
+  if (!n) return toast('请输入昵称', 'error');
+  if (n === userName) { $('rename-user-modal').classList.add('hidden'); return; }
+  socket.emit('rename-user', { newName: n }, res => {
+    if (res.error) return toast(res.error, 'error');
+    localStorage.setItem('squawk-name', n);
+    applyName(n);
+    $('rename-user-modal').classList.add('hidden');
+    toast('昵称已更新！', 'success');
+  });
+}
+
+socket.on('connect',()=>{$('conn-status').textContent='在线';toast('已连接','success');});
+socket.on('disconnect',()=>{$('conn-status').textContent='离线';toast('连接断开','error');});
+socket.on('kicked',({by})=>{leaveRoom();toast(`你被 ${escHtml(by)} 踢出了频道`,'error');});
+socket.on('error-msg',(msg)=>{toast(msg,'error');});
+socket.on('channel-deleted',({roomId})=>{if(currentRoom===roomId){leaveRoom();toast('频道已被删除','error');}});
+socket.on('channel-renamed',({oldId,newId})=>{
+  if(currentRoom===oldId){
+    currentRoom=newId;
+    $('current-room-name').textContent=newId;
+    selfStatus.textContent=newId;
+  }
+});
+socket.on('owner-changed',({owner,users})=>{currentOwner=owner;renderUsers(users);updateOwnerUI();toast(`👑 ${escHtml(owner)} 成为了频道主`);});
+socket.on('user-renamed',({socketId,oldName,newName,users,owner})=>{
+  currentOwner=owner;
+  renderUsers(users);
+  updateOwnerUI();
+  if(socketId!==socket.id) toast(`${escHtml(oldName)} 改名为 ${escHtml(newName)}`);
+});
+socket.on('user-kicked',({name,users,owner})=>{currentOwner=owner;renderUsers(users);toast(`${escHtml(name)} 已被踢出`);});
+
+// ── 频道列表 ──
+socket.on('room-list',rooms=>{
+  if(!rooms.length){roomList.innerHTML='<div class="text-center py-8 px-3 text-squawk-text-dim text-xs leading-relaxed"><strong class="block text-sm text-squawk-text-mid font-bold mb-1">暂无频道</strong>点击 + 创建一个频道</div>';return;}
+  roomList.innerHTML='';
+  for(const room of rooms){
+    const el=document.createElement('div');
+    el.className='room-item relative py-2 px-3 rounded-xl cursor-pointer flex items-center gap-2.5 transition-all border border-transparent hover:bg-squawk-card-hover'+(currentRoom===room.id?' active bg-squawk-blue-soft border-squawk-blue/20':''); el.dataset.roomId=room.id; el.dataset.owner=room.owner||'';
+    el.innerHTML=`<div class="w-[30px] h-[30px] rounded-lg bg-squawk-card border border-squawk-border flex items-center justify-center text-[13px] shrink-0 transition-all${currentRoom===room.id?' bg-squawk-blue border-transparent shadow-md shadow-squawk-blue-glow':''}">🔊</div><div class="flex-1 min-w-0"><div class="text-[13px] font-semibold truncate text-squawk-text">${escHtml(room.name)}</div><div class="text-[10px] text-squawk-text-dim mt-px font-medium">${room.count} 人在线</div></div><div class="text-[10px] font-bold bg-squawk-blue-soft text-squawk-blue2 rounded-full py-0.5 px-1.5 border border-squawk-blue/20 shrink-0${currentRoom===room.id?' bg-squawk-blue text-white border-transparent':''}">${room.count}</div>`;
+    el.addEventListener('click',()=>{if(!userName)return toast('请先设置昵称','error');$('sidebar').classList.remove('open');joinRoom(room.id);});
+    el.addEventListener('contextmenu',e=>{
+      e.preventDefault();
+      if(room.owner!==userName)return;
+      ctxRoomId=room.id;
+      showMenu(ctxChannel,e);
+    });
+    el.addEventListener('touchstart',e=>{
+      longPressTimer=setTimeout(()=>{
+        if(room.owner!==userName)return;
+        ctxRoomId=room.id; showMenu(ctxChannel,e);
+      },600);
+    },{passive:true});
+    el.addEventListener('touchend',()=>clearTimeout(longPressTimer));
+    el.addEventListener('touchmove',()=>clearTimeout(longPressTimer));
+    roomList.appendChild(el);
+  }
+});
+
+// ── 创建频道 ──
+$('open-create-modal').addEventListener('click',()=>{if(!userName)return toast('请先设置昵称','error');createModal.classList.remove('hidden');newRoomInput.focus();});
+$('cancel-create').addEventListener('click',()=>createModal.classList.add('hidden'));
+$('confirm-create').addEventListener('click',createRoom);
+newRoomInput.addEventListener('keydown',e=>{if(e.key==='Enter')createRoom();});
+function createRoom(){
+  const name=newRoomInput.value.trim(); if(!name)return toast('请输入频道名称','error');
+  const defaultMuted=$('default-muted-checkbox').checked;
+  socket.emit('create-room',{roomName:name,defaultMuted},res=>{
+    if(res.error)return toast(res.error,'error');
+    createModal.classList.add('hidden'); newRoomInput.value=''; $('default-muted-checkbox').checked=false; joinRoom(name);
+  });
+}
+
+// ── 加入频道 ──
+async function joinRoom(roomId){
+  if(currentRoom===roomId)return;
+  if(!localStream){
+    try{localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});setupSelfAnalyser(localStream);}
+    catch{toast('麦克风访问被拒绝','error');return;}
+  }
+  if(currentRoom)leaveRoom();
+  socket.emit('join-room',{roomId,userName});
+  currentRoom=roomId;
+  $('current-room-name').textContent=roomId;
+  roomScreen.classList.remove('hidden'); roomScreen.classList.add('flex'); welcomeScreen.style.display='none';
+  selfStatus.textContent=roomId; selfStatus.className='text-[10px] text-squawk-blue mt-px font-medium';
+  muteBtn.disabled=false; leaveBtn.disabled=false; orbBtn.disabled=false;
+  chatInput.disabled=false; sendBtn.disabled=false;
+  document.querySelectorAll('.room-item').forEach(el=>el.classList.toggle('active',el.dataset.roomId===roomId));
+}
+
+// ── 频道事件 ──
+socket.on('room-joined',async({peers:ep,users,messages,owner,defaultMuted})=>{
+  currentOwner=owner; renderUsers(users); updateOwnerUI();
+  for(const p of ep)await createPeer(p,true);
+  chatMessages.innerHTML='';
+  if(!messages||!messages.length){chatMessages.innerHTML='<div class="flex-1 flex flex-col items-center justify-center text-squawk-text-dim gap-2.5"><div class="text-4xl opacity-30">💬</div><div class="text-sm font-semibold">暂无消息</div></div>';}
+  else{messages.forEach(renderMessage);}
+  scrollChat();
+  // 默认静音
+  if(defaultMuted && !isMuted){
+    toggleMute();
+  }
+});
+socket.on('user-joined',async({name,users,owner})=>{currentOwner=owner;renderUsers(users);updateOwnerUI();toast(`${nameEmoji(name)} ${escHtml(name)} 加入了频道`);playSound('join');});
+socket.on('user-left',({socketId,users,owner})=>{closePeer(socketId);currentOwner=owner;renderUsers(users);updateOwnerUI();playSound('leave');});
+socket.on('user-muted',({users})=>renderUsers(users));
+
+socket.on('chat-message',msg=>{
+  const empty=chatMessages.querySelector('.chat-empty, .flex-1');if(empty&&empty.parentElement===chatMessages)empty.remove();
+  renderMessage(msg);scrollChat();
+  if(msg.socketId!==socket.id)playSound('message');
+});
+socket.on('typing-update',({users})=>{
+  const others=users.filter(n=>n!==userName);
+  typingIndicator.textContent=others.length===0?'':others.length===1?`${others[0]} 正在输入...`:`${others.slice(0,3).join(', ')} 正在输入...`;
+});
+
+function renderMessage(msg){
+  const isSelf=msg.socketId===socket.id||msg.name===userName;
+  const el=document.createElement('div'); el.className='flex gap-2.5 py-1 animate-msg-in'+(isSelf?' flex-row-reverse':'');
+  const [c1,c2]=nameColor(msg.name);
+  let content = '';
+  if(msg.fileUrl) {
+    const isImage = msg.fileType && msg.fileType.startsWith('image/');
+    const isVideo = msg.fileType && msg.fileType.startsWith('video/');
+    if(isImage) {
+      content = `<img src="${escHtml(msg.fileUrl)}" class="max-w-[300px] max-h-[200px] rounded-xl object-cover cursor-pointer" onclick="window.open(this.src)">`;
+    } else if(isVideo) {
+      content = `<video src="${escHtml(msg.fileUrl)}" class="max-w-[300px] max-h-[200px] rounded-xl" controls></video>`;
+    } else {
+      content = `<a href="${escHtml(msg.fileUrl)}" target="_blank" class="text-squawk-blue underline flex items-center gap-1">📎 ${escHtml(msg.fileName||'文件')}</a>`;
+    }
+    if(msg.text) content += `<div class="mt-1">${escHtml(msg.text)}</div>`;
+  } else {
+    content = escHtml(msg.text);
+  }
+  el.innerHTML=`<div class="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center text-base mt-0.5 border border-squawk-border" style="background:linear-gradient(135deg,${c1},${c2})">${nameEmoji(msg.name)}</div><div class="max-w-[72%] flex flex-col gap-0.5${isSelf?' items-end':''}"><div class="flex items-baseline gap-1.5${isSelf?' flex-row-reverse':''}"><span class="text-[11px] font-bold text-squawk-text-mid">${escHtml(msg.name)}</span><span class="font-mono text-[10px] text-squawk-text-dim">${formatTime(msg.ts)}</span></div><div class="py-2 px-3 rounded-2xl text-[13px] leading-relaxed break-words font-medium${isSelf?' bg-squawk-blue text-white rounded-tl-sm shadow-md shadow-squawk-blue-glow':' bg-squawk-bg3 border border-squawk-border text-squawk-text rounded-tl-sm'}">${content}</div></div>`;
+  chatMessages.appendChild(el);
+}
+function scrollChat(){chatMessages.scrollTop=chatMessages.scrollHeight;}
+
+// ── 聊天 ──
+function sendMessage(){
+  const text=chatInput.value.trim();if(!text||!currentRoom)return;
+  socket.emit('chat-message',{text});chatInput.value='';chatInput.style.height='';stopTyping();
+}
+sendBtn.addEventListener('click',sendMessage);
+chatInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}});
+chatInput.addEventListener('input',()=>{
+  chatInput.style.height='auto'; chatInput.style.height=Math.min(chatInput.scrollHeight,100)+'px';
+  if(!isTypingNow){isTypingNow=true;socket.emit('typing',{isTyping:true});}
+  clearTimeout(typingTimer); typingTimer=setTimeout(stopTyping,2000);
+});
+function stopTyping(){if(isTypingNow){isTypingNow=false;socket.emit('typing',{isTyping:false});}clearTimeout(typingTimer);}
+
+// ── 离开频道 ──
+function leaveRoom(){
+  socket.emit('leave-room');Object.keys(peers).forEach(closePeer);
+  currentRoom=null; currentOwner=null;
+  roomScreen.classList.add('hidden'); roomScreen.classList.remove('flex');
+  usersGrid.innerHTML=''; chatMessages.innerHTML='<div class="flex-1 flex flex-col items-center justify-center text-squawk-text-dim gap-2.5"><div class="text-4xl opacity-30">💬</div><div class="text-sm font-semibold">暂无消息</div></div>';
+  typingIndicator.textContent=''; ownerBadge.classList.add('hidden');
+  selfStatus.textContent='空闲'; selfStatus.className='text-[10px] text-squawk-text-dim mt-px font-medium';
+  muteBtn.disabled=true; leaveBtn.disabled=true; orbBtn.disabled=true;
+  chatInput.disabled=true; chatInput.value=''; sendBtn.disabled=true; stopTyping();
+  document.querySelectorAll('.room-item').forEach(el=>el.classList.remove('active'));
+}
+leaveBtn.addEventListener('click',leaveRoom);
+
+// ── 静音 ──
+function toggleMute(){
+  isMuted=!isMuted; if(localStream)localStream.getAudioTracks().forEach(t=>t.enabled=!isMuted);
+  muteBtn.textContent=isMuted?'🔇':'🎤'; muteBtn.classList.toggle('bg-squawk-red/10',isMuted); muteBtn.classList.toggle('border-squawk-red/30',isMuted); muteBtn.classList.toggle('text-squawk-red',isMuted);
+  orbBtn.textContent=isMuted?'🔇':'🎤'; orbBtn.classList.toggle('bg-white/5',isMuted); orbBtn.classList.toggle('shadow-none',isMuted);
+  $('record-label').textContent=isMuted?'已静音':'点击静音';
+  socket.emit('toggle-mute',{muted:isMuted});
+}
+muteBtn.addEventListener('click',toggleMute);
+orbBtn.addEventListener('click',toggleMute);
+
+// ── 渲染用户 ──
+function renderUsers(users){
+  usersGrid.innerHTML='';
+  for(const user of users){
+    const isSelf=user.socketId===socket.id, tile=document.createElement('div');
+    const isUserOwner=user.name===currentOwner;
+    tile.className='w-24 bg-squawk-bg3 border border-squawk-border rounded-2xl py-3.5 px-2.5 flex flex-col items-center gap-2 transition-all relative overflow-hidden'+(user.muted?' opacity-50':'')+(isUserOwner?' border-squawk-gold/30':''); tile.id=`tile-${user.socketId}`;
+    const [c1,c2]=nameColor(user.name), emoji=nameEmoji(user.name);
+    tile.innerHTML=`
+      <div class="relative">
+        <div class="w-12 h-12 rounded-full relative flex items-center justify-center text-[22px] z-10">
+          <div class="w-full h-full rounded-full flex items-center justify-center border-2 border-transparent transition-colors" style="background:linear-gradient(135deg,${c1},${c2})">${emoji}</div>
+          ${isUserOwner?'<div class="absolute -top-2 -right-1 text-sm z-20 drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]">👑</div>':''}
+        </div>
+      </div>
+      <div class="text-[11px] font-semibold text-center truncate max-w-[80px] z-10">${escHtml(user.name)}${isSelf?' ✦':''}</div>
+      <div class="text-[10px] text-squawk-red z-10${user.muted?'':' hidden'}">🔇 已静音</div>`;
+
+    if(isOwner()&&!isSelf){
+      tile.style.cursor='context-menu';
+      tile.addEventListener('contextmenu',e=>{
+        e.preventDefault();
+        ctxTargetSocketId=user.socketId; ctxTargetName=user.name;
+        showMenu(ctxUser,e);
+      });
+      tile.addEventListener('touchstart',e=>{
+        longPressTimer=setTimeout(()=>{ctxTargetSocketId=user.socketId;ctxTargetName=user.name;showMenu(ctxUser,e);},600);
+      },{passive:true});
+      tile.addEventListener('touchend',()=>clearTimeout(longPressTimer));
+      tile.addEventListener('touchmove',()=>clearTimeout(longPressTimer));
+    }
+    usersGrid.appendChild(tile);
+  }
+}
+
+// ── WebRTC ──
+socket.on('offer',async({from,offer})=>{const pc=await createPeer(from,false);await pc.setRemoteDescription(new RTCSessionDescription(offer));const answer=await pc.createAnswer();await pc.setLocalDescription(answer);socket.emit('answer',{to:from,answer});});
+socket.on('answer',async({from,answer})=>{const pc=peers[from];if(pc)await pc.setRemoteDescription(new RTCSessionDescription(answer));});
+socket.on('ice-candidate',async({from,candidate})=>{const pc=peers[from];if(pc&&candidate)try{await pc.addIceCandidate(new RTCIceCandidate(candidate));}catch{}});
+
+async function createPeer(peerId,initiator){
+  if(peers[peerId])return peers[peerId];
+  const pc=new RTCPeerConnection(ICE); peers[peerId]=pc;
+  if(localStream)localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+  pc.onicecandidate=({candidate})=>{if(candidate)socket.emit('ice-candidate',{to:peerId,candidate});};
+  pc.ontrack=({streams})=>{if(!streams[0])return;const a=new Audio();a.srcObject=streams[0];a.autoplay=true;setupRemoteAnalyser(peerId,streams[0]);};
+  if(initiator){const offer=await pc.createOffer();await pc.setLocalDescription(offer);socket.emit('offer',{to:peerId,offer});}
+  return pc;
+}
+function closePeer(id){if(peers[id]){peers[id].close();delete peers[id];}if(analyserNodes[id]){analyserNodes[id].source?.disconnect();delete analyserNodes[id];}}
+
+// ── 音频分析 ──
+function setupSelfAnalyser(stream){try{if(audioCtx.state==='suspended')audioCtx.resume();const src=audioCtx.createMediaStreamSource(stream),an=audioCtx.createAnalyser();an.fftSize=256;src.connect(an);selfAnalyser={analyser:an,source:src};animateSelf();}catch{}}
+function setupRemoteAnalyser(id,stream){try{if(audioCtx.state==='suspended')audioCtx.resume();const src=audioCtx.createMediaStreamSource(stream),an=audioCtx.createAnalyser();an.fftSize=256;src.connect(an);analyserNodes[id]={analyser:an,source:src};animateRemote(id);}catch{}}
+function getVolume(an){const b=new Uint8Array(an.frequencyBinCount);an.getByteFrequencyData(b);return b.reduce((a,v)=>a+v,0)/b.length;}
+function animateSelf(){if(!selfAnalyser)return;const vol=getVolume(selfAnalyser.analyser),tile=document.getElementById(`tile-${socket.id}`);if(tile){tile.classList.toggle('speaking',vol>12&&!isMuted);}requestAnimationFrame(animateSelf);}
+function animateRemote(id){const node=analyserNodes[id];if(!node)return;const vol=getVolume(node.analyser),tile=document.getElementById(`tile-${id}`);if(tile){tile.classList.toggle('speaking',vol>8);}requestAnimationFrame(()=>{if(analyserNodes[id])animateRemote(id);});}
+
+// ── 声音通知 ──
+function playSound(type){
+  try{
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    const gain=audioCtx.createGain(); gain.connect(audioCtx.destination);
+    if(type==='join'){
+      [523.25,659.25].forEach((freq,i)=>{
+        const osc=audioCtx.createOscillator(),g=audioCtx.createGain(); osc.connect(g);g.connect(gain);
+        osc.type='sine';osc.frequency.value=freq; const t=audioCtx.currentTime+i*0.12;
+        g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.18,t+0.02);g.gain.exponentialRampToValueAtTime(0.001,t+0.4);
+        osc.start(t);osc.stop(t+0.4);
+      });
+    } else if(type==='leave'){
+      [659.25,493.88].forEach((freq,i)=>{
+        const osc=audioCtx.createOscillator(),g=audioCtx.createGain(); osc.connect(g);g.connect(gain);
+        osc.type='sine';osc.frequency.value=freq; const t=audioCtx.currentTime+i*0.12;
+        g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.14,t+0.02);g.gain.exponentialRampToValueAtTime(0.001,t+0.35);
+        osc.start(t);osc.stop(t+0.35);
+      });
+    } else if(type==='message'){
+      const osc=audioCtx.createOscillator(),g=audioCtx.createGain(); osc.connect(g);g.connect(gain);
+      osc.type='sine'; osc.frequency.setValueAtTime(880,audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(440,audioCtx.currentTime+0.08);
+      g.gain.setValueAtTime(0,audioCtx.currentTime);g.gain.linearRampToValueAtTime(0.12,audioCtx.currentTime+0.01);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.15);
+      osc.start();osc.stop(audioCtx.currentTime+0.15);
+    }
+  }catch{}
+}
+
+// ── 文件上传 ──
+const fileInput = $('file-input');
+const fileBtn = $('file-btn');
+
+fileBtn.addEventListener('click', () => {
+  if (!currentRoom) return toast('请先加入频道', 'error');
+  fileInput.click();
+});
+
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (file.size > 50 * 1024 * 1024) {
+    toast('文件太大（最大50MB）', 'error');
+    return;
+  }
+
+  uploadFile(file);
+  fileInput.value = '';
+});
+
+function uploadFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  toast('正在上传...', 'success');
+
+  fetch('/upload', {
+    method: 'POST',
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.error) {
+      toast(data.error, 'error');
+      return;
+    }
+    socket.emit('chat-message', {
+      text: '',
+      fileUrl: data.url,
+      fileName: data.originalname,
+      fileType: data.mimetype
+    });
+    toast('上传成功！', 'success');
+  })
+  .catch(err => toast('上传失败: ' + err.message, 'error'));
+}
+
+// ── 表情选择器 ──
+const emojiModal = $('emoji-modal');
+const emojiBtn = $('emoji-btn');
+const cancelEmoji = $('cancel-emoji');
+
+emojiBtn.addEventListener('click', () => {
+  if (!currentRoom) return toast('请先加入频道', 'error');
+  emojiModal.classList.remove('hidden');
+});
+
+cancelEmoji.addEventListener('click', () => {
+  emojiModal.classList.add('hidden');
+});
+
+emojiModal.addEventListener('click', (e) => {
+  if (e.target === emojiModal) {
+    emojiModal.classList.add('hidden');
+  }
+});
+
+function insertEmoji(emoji) {
+  const chatInput = $('chat-input');
+  const start = chatInput.selectionStart;
+  const end = chatInput.selectionEnd;
+  const text = chatInput.value;
+
+  chatInput.value = text.substring(0, start) + emoji + text.substring(end);
+  chatInput.focus();
+
+  const newPos = start + emoji.length;
+  chatInput.setSelectionRange(newPos, newPos);
+
+  emojiModal.classList.add('hidden');
+}
+
+// ── 启用/禁用按钮 ──
+function updateChatButtons() {
+  const enabled = !!currentRoom;
+  fileBtn.disabled = !enabled;
+  emojiBtn.disabled = !enabled;
+}
+
+// 在加入/离开频道时更新按钮状态
+const originalJoinRoom = joinRoom;
+joinRoom = async function(roomId) {
+  await originalJoinRoom(roomId);
+  updateChatButtons();
+};
+
+const originalLeaveRoom = leaveRoom;
+leaveRoom = function() {
+  originalLeaveRoom();
+  updateChatButtons();
+};
+</script>
+</body>
+</html>
