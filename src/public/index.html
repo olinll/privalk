@@ -272,6 +272,10 @@
             <div class="voice-text text-[10px] font-bold tracking-[0.12em] uppercase text-squawk-text-dim mb-1">当前在</div>
             <div class="flex items-center justify-center gap-2">
               <div class="text-[22px] font-extrabold tracking-tight" id="current-room-name"></div>
+              <div class="hidden text-[11px] font-bold text-squawk-red bg-squawk-red/10 border border-squawk-red/25 rounded-md py-0.5 px-1.5 whitespace-nowrap" id="private-badge">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="inline"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                私密
+              </div>
               <div class="voice-text hidden text-[11px] font-bold text-squawk-gold bg-squawk-gold/10 border border-squawk-gold/25 rounded-md py-0.5 px-1.5 whitespace-nowrap" id="owner-badge">👑 频道主</div>
             </div>
           </div>
@@ -412,6 +416,10 @@
       <input type="checkbox" id="default-muted-checkbox" class="w-4 h-4 rounded border-squawk-border2 bg-white/5 text-squawk-blue focus:ring-squawk-blue focus:ring-offset-0">
       <span class="text-[13px] font-medium text-squawk-text-mid">加入时默认静音</span>
     </label>
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" id="private-checkbox" class="w-4 h-4 rounded border-squawk-border2 bg-white/5 text-squawk-blue focus:ring-squawk-blue focus:ring-offset-0">
+      <span class="text-[13px] font-medium text-squawk-text-mid">私密会话（不存储消息，图片 Base64 传输）</span>
+    </label>
     <div class="flex gap-2 mt-1">
       <button class="flex-1 bg-white/5 border border-squawk-border rounded-xl text-squawk-text-mid text-[13px] font-bold py-3 cursor-pointer transition-all hover:border-squawk-border2 hover:text-squawk-text" id="cancel-create">取消</button>
       <button class="flex-1 bg-squawk-blue text-white text-[13px] font-bold border-none rounded-xl py-3 cursor-pointer transition-all hover:bg-squawk-blue2 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-squawk-blue-glow" id="confirm-create">创建 →</button>
@@ -477,7 +485,7 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
 // ── 状态 ──
-let socket, userName=localStorage.getItem('squawk-name')||'', currentRoom=null, currentOwner=null, isMuted=false, localStream=null;
+let socket, userName=localStorage.getItem('squawk-name')||'', currentRoom=null, currentOwner=null, isMuted=false, localStream=null, currentRoomPrivate=false;
 const peers={}, ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
 const audioCtx=new AudioContext(), analyserNodes={};
 let selfAnalyser=null, typingTimer=null, isTypingNow=false;
@@ -709,7 +717,8 @@ socket.on('room-list',rooms=>{
   for(const room of rooms){
     const el=document.createElement('div');
     el.className='room-item relative py-2 px-3 rounded-xl cursor-pointer flex items-center gap-2.5 transition-all border border-transparent hover:bg-squawk-card-hover'+(currentRoom===room.id?' active bg-squawk-blue-soft border-squawk-blue/20':''); el.dataset.roomId=room.id; el.dataset.owner=room.owner||'';
-    el.innerHTML=`${avatarHtml(room.name)}<div class="flex-1 min-w-0"><div class="room-name text-[13px] font-semibold truncate text-squawk-text">${escHtml(room.name)}</div><div class="room-count text-[10px] text-squawk-text-dim mt-px font-medium">${room.count} 人在线</div></div><div class="room-count text-[10px] font-bold bg-squawk-blue-soft text-squawk-blue2 rounded-full py-0.5 px-1.5 border border-squawk-blue/20 shrink-0${currentRoom===room.id?' bg-squawk-blue text-white border-transparent':''}">${room.count}</div>`;
+    const privateIcon=room.isPrivate?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="inline ml-1 text-squawk-red"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>':'';
+    el.innerHTML=`${avatarHtml(room.name)}<div class="flex-1 min-w-0"><div class="room-name text-[13px] font-semibold truncate text-squawk-text">${escHtml(room.name)}${privateIcon}</div><div class="room-count text-[10px] text-squawk-text-dim mt-px font-medium">${room.count} 人在线</div></div><div class="room-count text-[10px] font-bold bg-squawk-blue-soft text-squawk-blue2 rounded-full py-0.5 px-1.5 border border-squawk-blue/20 shrink-0${currentRoom===room.id?' bg-squawk-blue text-white border-transparent':''}">${room.count}</div>`;
     el.addEventListener('click',()=>{if(!userName)return toast('请先设置昵称','error');$('sidebar').classList.remove('open');joinRoom(room.id);});
     el.addEventListener('contextmenu',e=>{
       e.preventDefault();
@@ -737,9 +746,10 @@ newRoomInput.addEventListener('keydown',e=>{if(e.key==='Enter')createRoom();});
 function createRoom(){
   const name=newRoomInput.value.trim(); if(!name)return toast('请输入频道名称','error');
   const defaultMuted=$('default-muted-checkbox').checked;
-  socket.emit('create-room',{roomName:name,defaultMuted},res=>{
+  const isPrivate=$('private-checkbox').checked;
+  socket.emit('create-room',{roomName:name,defaultMuted,isPrivate},res=>{
     if(res.error)return toast(res.error,'error');
-    createModal.classList.add('hidden'); newRoomInput.value=''; $('default-muted-checkbox').checked=false; joinRoom(name);
+    createModal.classList.add('hidden'); newRoomInput.value=''; $('default-muted-checkbox').checked=false; $('private-checkbox').checked=false; joinRoom(name);
   });
 }
 
@@ -762,17 +772,18 @@ async function joinRoom(roomId){
 }
 
 // ── 频道事件 ──
-socket.on('room-joined',async({peers:ep,users,messages,owner,defaultMuted})=>{
-  currentOwner=owner; renderUsers(users); updateOwnerUI();
+socket.on('room-joined',async({peers:ep,users,messages,owner,defaultMuted,isPrivate})=>{
+  currentOwner=owner; currentRoomPrivate=!!isPrivate; renderUsers(users); updateOwnerUI();
   for(const p of ep)await createPeer(p,true);
   chatMessages.innerHTML='';
   if(!messages||!messages.length){chatMessages.innerHTML='<div class="flex-1 flex flex-col items-center justify-center text-squawk-text-dim gap-2.5"><div class="text-4xl opacity-30">💬</div><div class="text-sm font-semibold">暂无消息</div></div>';}
   else{messages.forEach(renderMessage);}
   scrollChat();
-  // 默认静音
-  if(defaultMuted && !isMuted){
-    toggleMute();
-  }
+  if(defaultMuted && !isMuted) toggleMute();
+  // 私密会话指示器
+  const privateBadge=$('private-badge');
+  if(privateBadge) privateBadge.classList.toggle('hidden',!currentRoomPrivate);
+  if(currentRoomPrivate) toast('已进入私密会话，消息不会存储','success');
 });
 socket.on('user-joined',async({name,users,owner})=>{currentOwner=owner;renderUsers(users);updateOwnerUI();toast(`${escHtml(name)} 加入了频道`);playSound('join');});
 socket.on('user-left',({socketId,users,owner})=>{closePeer(socketId);currentOwner=owner;renderUsers(users);updateOwnerUI();playSound('leave');});
@@ -843,7 +854,7 @@ function stopTyping(){if(isTypingNow){isTypingNow=false;socket.emit('typing',{is
 // ── 离开频道 ──
 function leaveRoom(){
   socket.emit('leave-room');Object.keys(peers).forEach(closePeer);
-  currentRoom=null; currentOwner=null;
+  currentRoom=null; currentOwner=null; currentRoomPrivate=false;
   roomScreen.classList.add('hidden'); roomScreen.classList.remove('flex');
   usersGrid.innerHTML=''; chatMessages.innerHTML='<div class="flex-1 flex flex-col items-center justify-center text-squawk-text-dim gap-2.5"><div class="text-4xl opacity-30">💬</div><div class="text-sm font-semibold">暂无消息</div></div>';
   typingIndicator.textContent=''; ownerBadge.classList.add('hidden');
@@ -979,30 +990,45 @@ fileInput.addEventListener('change', (e) => {
 });
 
 function uploadFile(file) {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  toast('正在上传...', 'success');
-
-  fetch('/upload', {
-    method: 'POST',
-    body: formData
-  })
-  .then(res => res.json())
-  .then(data => {
-    if(data.error) {
-      toast(data.error, 'error');
-      return;
-    }
-    socket.emit('chat-message', {
-      text: '',
-      fileUrl: data.url,
-      fileName: data.originalname,
-      fileType: data.mimetype
-    });
-    toast('上传成功！', 'success');
-  })
-  .catch(err => toast('上传失败: ' + err.message, 'error'));
+  if(currentRoomPrivate){
+    // 私密会话：Base64 传输
+    toast('正在处理...', 'success');
+    const reader=new FileReader();
+    reader.onload=()=>{
+      socket.emit('chat-message',{
+        text:'',
+        fileUrl:reader.result,
+        fileName:file.name,
+        fileType:file.type
+      });
+      toast('已发送','success');
+    };
+    reader.onerror=()=>toast('处理失败','error');
+    reader.readAsDataURL(file);
+  } else {
+    const formData = new FormData();
+    formData.append('file', file);
+    toast('正在上传...', 'success');
+    fetch('/upload', {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      if(data.error) {
+        toast(data.error, 'error');
+        return;
+      }
+      socket.emit('chat-message', {
+        text: '',
+        fileUrl: data.url,
+        fileName: data.originalname,
+        fileType: data.mimetype
+      });
+      toast('上传成功！', 'success');
+    })
+    .catch(err => toast('上传失败: ' + err.message, 'error'));
+  }
 }
 
 // ── 表情选择器 ──

@@ -92,14 +92,14 @@ io.on("connection", (socket: CustomSocket) => {
   };
 
   // ── 创建频道 ──
-  socket.on("create-room", guard(({ roomName, defaultMuted }: { roomName: string; defaultMuted?: boolean }, cb: Function) => {
+  socket.on("create-room", guard(({ roomName, defaultMuted, isPrivate }: { roomName: string; defaultMuted?: boolean; isPrivate?: boolean }, cb: Function) => {
     if (typeof cb !== "function") return;
     const name = sanitiseRoomName(roomName);
     if (!name) return cb({ error: "频道名称无效" });
     if (rooms[name]) return cb({ error: "频道已存在" });
     if (Object.keys(rooms).length >= MAX_ROOMS) return cb({ error: "已达到最大频道数" });
 
-    rooms[name] = { users: new Map(), messages: [], owner: null, defaultMuted: !!defaultMuted };
+    rooms[name] = { users: new Map(), messages: [], owner: null, defaultMuted: !!defaultMuted, isPrivate: !!isPrivate };
     typingUsers[name] = new Set();
     saveChannels();
     io.emit("room-list", getRoomList());
@@ -116,7 +116,7 @@ io.on("connection", (socket: CustomSocket) => {
 
     if (!rooms[cleanRoom]) {
       if (Object.keys(rooms).length >= MAX_ROOMS) return;
-      rooms[cleanRoom] = { users: new Map(), messages: [], owner: null, defaultMuted: false };
+      rooms[cleanRoom] = { users: new Map(), messages: [], owner: null, defaultMuted: false, isPrivate: false };
       typingUsers[cleanRoom] = new Set();
     }
     if (!typingUsers[cleanRoom]) typingUsers[cleanRoom] = new Set();
@@ -139,6 +139,7 @@ io.on("connection", (socket: CustomSocket) => {
       messages: getRoomMessages(cleanRoom),
       owner: room.owner,
       defaultMuted: room.defaultMuted,
+      isPrivate: room.isPrivate,
     });
 
     socket.to(cleanRoom).emit("user-joined", {

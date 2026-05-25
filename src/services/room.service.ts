@@ -19,6 +19,7 @@ export interface Room {
   messages: Message[];
   owner: string | null;
   defaultMuted: boolean;
+  isPrivate: boolean;
 }
 
 export interface Message {
@@ -70,14 +71,24 @@ export function sanitiseRoomName(raw: unknown): string | null {
 export const rooms: Record<string, Room> = Object.create(null);
 export const typingUsers: Record<string, Set<string>> = Object.create(null);
 
-function loadChannels(): string[] {
+interface ChannelMeta {
+  name: string;
+  defaultMuted: boolean;
+  isPrivate: boolean;
+}
+
+function loadChannels(): ChannelMeta[] {
   try {
     if (!fs.existsSync(CHANNELS_FILE)) return [];
     const raw = JSON.parse(fs.readFileSync(CHANNELS_FILE, "utf8"));
     if (!Array.isArray(raw)) return [];
+    // 兼容旧格式（纯字符串数组）
     return raw
-      .map(n => sanitiseRoomName(n))
-      .filter((n): n is string => n !== null)
+      .map(n => {
+        if (typeof n === "string") return { name: sanitiseRoomName(n), defaultMuted: false, isPrivate: false };
+        return { name: sanitiseRoomName(n.name), defaultMuted: !!n.defaultMuted, isPrivate: !!n.isPrivate };
+      })
+      .filter((n): n is ChannelMeta => n.name !== null)
       .slice(0, MAX_ROOMS);
   } catch (e: unknown) {
     console.error("加载频道失败:", e instanceof Error ? e.message : e);
@@ -87,7 +98,12 @@ function loadChannels(): string[] {
 
 export function saveChannels(): void {
   try {
-    fs.writeFileSync(CHANNELS_FILE, JSON.stringify(Object.keys(rooms), null, 2));
+    const data = Object.entries(rooms).map(([name, room]) => ({
+      name,
+      defaultMuted: room.defaultMuted,
+      isPrivate: room.isPrivate,
+    }));
+    fs.writeFileSync(CHANNELS_FILE, JSON.stringify(data, null, 2));
   } catch (e: unknown) {
     console.error("保存频道失败:", e instanceof Error ? e.message : e);
   }
@@ -113,7 +129,7 @@ function loadChannelChat(name: string): Message[] {
 export function saveChannelChat(name: string): void {
   try {
     const room = rooms[name];
-    if (!room) return;
+    if (!room || room.isPrivate) return;
     const fp = chatFilePath(name);
     const data: ChannelChatFile = {
       name,
@@ -148,9 +164,9 @@ export function markChannelDeleted(name: string): void {
 }
 
 // 初始化加载频道和消息
-for (const name of loadChannels()) {
-  rooms[name] = { users: new Map(), messages: loadChannelChat(name), owner: null, defaultMuted: false };
-  typingUsers[name] = new Set();
+for (const meta of loadChannels()) {
+  rooms[meta.name] = { users: new Map(), messages: loadChannelChat(meta.name), owner: null, defaultMuted: meta.defaultMuted, isPrivate: meta.isPrivate };
+  typingUsers[meta.name] = new Set();
 }
 console.log(`[~] 已加载 ${Object.keys(rooms).length} 个频道:`, Object.keys(rooms));
 
@@ -160,6 +176,7 @@ export function getRoomList() {
     users: Array.from(room.users.values()),
     owner: room.owner,
     defaultMuted: room.defaultMuted,
+    isPrivate: room.isPrivate,
   }));
 }
 
