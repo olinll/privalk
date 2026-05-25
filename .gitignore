@@ -4,7 +4,6 @@ channels.json
 messages.json
 chat/
 .env
-.env.*
 *.pem
 key.pem
 cert.pem

@@ -207,6 +207,12 @@ const server = https.createServer({
 
 ## 配置
 
+在项目根目录创建 `.env` 文件配置环境变量（可复制 `.env.example`）：
+
+```bash
+cp .env.example .env
+```
+
 | 变量 | 默认值 | 描述 |
 |------|--------|------|
 | `PORT` | `3000` | 服务器监听端口 |
