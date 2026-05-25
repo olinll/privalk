@@ -117,35 +117,39 @@
     .light .border-squawk-blue\/20 { border-color: rgba(79,125,255,0.2) !important; }
     .light .shadow-squawk-blue-glow { --tw-shadow-color: rgba(79,125,255,0.15) !important; }
     #app { display:grid; grid-template-columns:auto 1fr auto; grid-template-rows:64px 1fr 72px; height:100vh; position:relative; z-index:1; grid-template-areas:"header header header" "sidebar main voice" "controls controls controls"; }
-    #sidebar { grid-area:sidebar; width:240px; transition:width 0.3s cubic-bezier(0.4,0,0.2,1); overflow:hidden; }
-    #sidebar.collapsed { width:56px; }
+    .sidebar-wrap { grid-area:sidebar; display:flex; overflow:hidden; }
+    .voice-wrap { grid-area:voice; display:flex; overflow:hidden; }
+    #sidebar { width:240px; min-width:240px; transition:width 0.3s cubic-bezier(0.4,0,0.2,1), min-width 0.3s cubic-bezier(0.4,0,0.2,1); overflow:hidden; display:flex; flex-direction:column; gap:4px; background:var(--bg2); border-right:1px solid var(--border); padding:14px; }
+    #sidebar.collapsed { width:56px; min-width:56px; }
     #sidebar.collapsed .sidebar-text { display:none; }
     #sidebar.collapsed .sidebar-header-text { display:none; }
-    #sidebar.collapsed #room-list { align-items:center; padding:0 4px; }
-    #sidebar.collapsed .room-item { justify-content:center; padding:6px 0; gap:0; }
-    #sidebar.collapsed .room-item .room-avatar { width:36px; height:36px; }
+    #sidebar.collapsed #room-list { align-items:center; padding:0 2px; }
+    #sidebar.collapsed .room-item { justify-content:center; padding:6px 0; gap:0; width:100%; }
+    #sidebar.collapsed .room-item .room-avatar { width:36px; height:36px; font-size:16px; }
     #sidebar.collapsed .room-item .room-name,
     #sidebar.collapsed .room-item .room-count { display:none; }
-    #sidebar.collapsed .sidebar-header { justify-content:center; padding:0 8px; }
+    #sidebar.collapsed .sidebar-header { justify-content:center; padding:0 4px; }
     #sidebar.collapsed #open-create-modal { margin:0; }
     #main { grid-area:main; min-width:0; }
-    #voice-panel { grid-area:voice; width:280px; transition:width 0.3s cubic-bezier(0.4,0,0.2,1); overflow:hidden; }
-    #voice-panel.collapsed { width:56px; }
+    #voice-panel { width:280px; min-width:280px; transition:width 0.3s cubic-bezier(0.4,0,0.2,1), min-width 0.3s cubic-bezier(0.4,0,0.2,1); overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:28px; background:var(--bg2); border-right:1px solid var(--border); }
+    #voice-panel.collapsed { width:56px; min-width:56px; padding:14px 8px; gap:12px; }
     #voice-panel.collapsed .voice-text { display:none; }
-    #voice-panel.collapsed .voice-header { justify-content:center; }
+    #voice-panel.collapsed .voice-header { justify-content:center; width:100%; }
     #voice-panel.collapsed #users-grid { flex-direction:column; align-items:center; gap:6px; }
-    #voice-panel.collapsed .user-tile { width:36px; height:36px; padding:0; border-radius:50%; flex-direction:row; gap:0; }
-    #voice-panel.collapsed .user-tile .w-12 { width:36px; height:36px; }
+    #voice-panel.collapsed .user-tile { width:36px; height:36px; padding:0; border-radius:50%; }
+    #voice-panel.collapsed .user-tile .user-tile-inner { width:36px; height:36px; }
+    #voice-panel.collapsed .user-tile .user-tile-inner > div:first-child { width:36px; height:36px; font-size:14px; }
     #voice-panel.collapsed .user-tile .user-name,
-    #voice-panel.collapsed .user-tile .user-muted-badge,
-    #voice-panel.collapsed .user-tile .relative > div:last-child { display:none; }
-    #voice-panel.collapsed .voice-controls { flex-direction:column; align-items:center; }
-    #voice-panel.collapsed .voice-controls button:first-child { width:40px; height:40px; }
+    #voice-panel.collapsed .user-tile .user-muted-badge { display:none; }
+    #voice-panel.collapsed .voice-controls { flex-direction:column; align-items:center; gap:10px; }
+    #voice-panel.collapsed .voice-controls .orb-wrap { width:40px; height:40px; }
+    #voice-panel.collapsed .voice-controls .orb-wrap button { width:40px; height:40px; }
     #controls { grid-area:controls; }
     #header { grid-area:header; }
-    .sidebar-toggle, .voice-toggle { width:20px; min-height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-dim); font-size:10px; transition:background 0.2s; border:none; background:transparent; }
+    .sidebar-toggle, .voice-toggle { width:20px; min-height:100%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-dim); transition:background 0.2s; border:none; background:transparent; flex-shrink:0; }
     .sidebar-toggle:hover, .voice-toggle:hover { background:var(--card-hover); }
     .sidebar-toggle { border-right:1px solid var(--border); }
+    .voice-toggle { border-left:1px solid var(--border); }
     .voice-toggle { border-left:1px solid var(--border); }
 
     .room-item { position:relative; transition:all 0.2s; }
@@ -219,8 +223,8 @@
   </header>
 
   <!-- 侧边栏 -->
-  <div class="flex">
-    <nav id="sidebar" class="flex flex-col gap-1 bg-squawk-bg2 border-r border-squawk-border p-3.5">
+  <div class="sidebar-wrap">
+    <nav id="sidebar">
       <div class="sidebar-header text-[10px] font-bold tracking-[0.12em] uppercase text-squawk-text-dim px-2.5 mb-1.5 flex items-center justify-between h-6">
         <span class="sidebar-header-text">频道</span>
         <button class="w-5 h-5 rounded-md bg-squawk-blue border-none text-white cursor-pointer flex items-center justify-center transition-all hover:bg-squawk-blue2 hover:scale-110 shadow-md shadow-squawk-blue-glow" id="open-create-modal" title="创建频道">
@@ -266,8 +270,8 @@
     <!-- 频道屏幕 -->
     <div id="room-screen" class="hidden relative z-10 w-full h-full flex-row">
       <!-- 语音面板 -->
-      <div class="flex">
-        <div id="voice-panel" class="flex flex-col items-center justify-center gap-5 p-7 bg-squawk-bg2 border-r border-squawk-border">
+      <div class="voice-wrap">
+        <div id="voice-panel">
           <div class="voice-header text-center">
             <div class="voice-text text-[10px] font-bold tracking-[0.12em] uppercase text-squawk-text-dim mb-1">当前在</div>
             <div class="flex items-center justify-center gap-2">
@@ -287,10 +291,12 @@
             <div id="users-grid" class="flex flex-wrap gap-2.5 justify-center"></div>
           </div>
           <div class="voice-controls flex flex-col items-center gap-2.5">
-            <button class="w-[60px] h-[60px] rounded-full bg-squawk-blue border-none flex items-center justify-center cursor-pointer transition-all shadow-[0_0_0_8px_var(--tw-color-squawk-blue-soft),0_8px_28px_var(--tw-color-squawk-blue-glow)] relative disabled:opacity-30 disabled:cursor-not-allowed hover:bg-squawk-blue2 hover:scale-105" id="orb-btn" disabled title="切换静音">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="orb-icon"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-              <div class="absolute inset-[-8px] rounded-full border border-squawk-blue/20 animate-record-pulse"></div>
-            </button>
+            <div class="orb-wrap w-[60px] h-[60px] relative">
+              <button class="w-full h-full rounded-full bg-squawk-blue border-none flex items-center justify-center cursor-pointer transition-all shadow-[0_0_0_8px_var(--tw-color-squawk-blue-soft),0_8px_28px_var(--tw-color-squawk-blue-glow)] relative disabled:opacity-30 disabled:cursor-not-allowed hover:bg-squawk-blue2 hover:scale-105" id="orb-btn" disabled title="切换静音">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="orb-icon"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </button>
+              <div class="absolute inset-[-8px] rounded-full border border-squawk-blue/20 animate-record-pulse pointer-events-none"></div>
+            </div>
             <div class="voice-text text-[11px] font-semibold text-squawk-text-dim" id="record-label">点击静音</div>
           </div>
         </div>
@@ -902,8 +908,8 @@ function renderUsers(users){
     tile.className='user-tile w-24 bg-squawk-bg3 border border-squawk-border rounded-2xl py-3.5 px-2.5 flex flex-col items-center gap-2 transition-all relative overflow-hidden'+(user.muted?' opacity-50':'')+(isUserOwner?' border-squawk-gold/30':''); tile.id=`tile-${user.socketId}`;
     const [c1,c2]=avatarGradient(user.name), initial=nameInitial(user.name);
     tile.innerHTML=`
-      <div class="relative">
-        <div class="w-12 h-12 rounded-full relative flex items-center justify-center text-[22px] z-10">
+      <div class="user-tile-inner relative">
+        <div class="w-12 h-12 rounded-full relative flex items-center justify-center z-10">
           <div class="w-full h-full rounded-full flex items-center justify-center font-bold text-white text-[20px] border-2 border-transparent transition-colors" style="background:linear-gradient(135deg,${c1},${c2})">${initial}</div>
           ${isUserOwner?'<div class="absolute -top-2 -right-1 text-sm z-20 drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]">👑</div>':''}
         </div>
