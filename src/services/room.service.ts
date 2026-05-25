@@ -75,6 +75,7 @@ interface ChannelMeta {
   name: string;
   defaultMuted: boolean;
   isPrivate: boolean;
+  owner: string | null;
 }
 
 function loadChannels(): ChannelMeta[] {
@@ -85,8 +86,8 @@ function loadChannels(): ChannelMeta[] {
     // 兼容旧格式（纯字符串数组）
     return raw
       .map(n => {
-        if (typeof n === "string") return { name: sanitiseRoomName(n), defaultMuted: false, isPrivate: false };
-        return { name: sanitiseRoomName(n.name), defaultMuted: !!n.defaultMuted, isPrivate: !!n.isPrivate };
+        if (typeof n === "string") return { name: sanitiseRoomName(n), defaultMuted: false, isPrivate: false, owner: null };
+        return { name: sanitiseRoomName(n.name), defaultMuted: !!n.defaultMuted, isPrivate: !!n.isPrivate, owner: n.owner || null };
       })
       .filter((n): n is ChannelMeta => n.name !== null)
       .slice(0, MAX_ROOMS);
@@ -102,6 +103,7 @@ export function saveChannels(): void {
       name,
       defaultMuted: room.defaultMuted,
       isPrivate: room.isPrivate,
+      owner: room.owner,
     }));
     fs.writeFileSync(CHANNELS_FILE, JSON.stringify(data, null, 2));
   } catch (e: unknown) {
@@ -165,7 +167,7 @@ export function markChannelDeleted(name: string): void {
 
 // 初始化加载频道和消息
 for (const meta of loadChannels()) {
-  rooms[meta.name] = { users: new Map(), messages: loadChannelChat(meta.name), owner: null, defaultMuted: meta.defaultMuted, isPrivate: meta.isPrivate };
+  rooms[meta.name] = { users: new Map(), messages: loadChannelChat(meta.name), owner: meta.owner, defaultMuted: meta.defaultMuted, isPrivate: meta.isPrivate };
   typingUsers[meta.name] = new Set();
 }
 console.log(`[~] 已加载 ${Object.keys(rooms).length} 个频道:`, Object.keys(rooms));

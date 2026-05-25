@@ -125,7 +125,7 @@ io.on("connection", (socket: CustomSocket) => {
     if (room.users.size >= MAX_USERS_ROOM) return;
 
     const existingUsers = Array.from(room.users.keys());
-    if (!room.owner) room.owner = cleanName;
+    if (!room.owner) { room.owner = cleanName; saveChannels(); }
 
     room.users.set(socket.id, { name: cleanName, muted: false, socketId: socket.id });
     socket.currentRoom = cleanRoom;
@@ -307,7 +307,7 @@ io.on("connection", (socket: CustomSocket) => {
       const user = room.users.get(socket.id);
       if (user) {
         user.name = cleanName;
-        if (room.owner === oldName) room.owner = cleanName;
+        if (room.owner === oldName) { room.owner = cleanName; saveChannels(); }
         if (typingUsers[socket.currentRoom]?.has(oldName || "")) {
           typingUsers[socket.currentRoom].delete(oldName || "");
           typingUsers[socket.currentRoom].add(cleanName);
@@ -348,9 +348,11 @@ io.on("connection", (socket: CustomSocket) => {
     if (room.owner === leavingName && room.users.size > 0) {
       const nextUser = Array.from(room.users.values())[0];
       room.owner = nextUser.name;
+      saveChannels();
       io.to(roomId).emit("owner-changed", { owner: room.owner, users: getRoomUsers(roomId) });
     } else if (room.users.size === 0) {
       room.owner = null;
+      saveChannels();
     }
 
     sock.leave(roomId);
