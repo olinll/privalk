@@ -51,6 +51,44 @@ pm2 save && pm2 startup
 
 ---
 
+## 通过 Cloudflare Tunnel 与朋友连接
+
+如果你想让不在局域网内的朋友也能访问 Privalk，可以使用 [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) 将服务暴露到公网。
+
+**快速设置：**
+
+1. 安装 cloudflared：[developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-local-tunnel/](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-local-tunnel/)
+2. 登录并创建隧道：
+   ```bash
+   cloudflared tunnel login
+   cloudflared tunnel create privalk
+   ```
+3. 配置隧道指向本地服务：
+   ```yaml
+   # ~/.cloudflared/config.yml
+   tunnel: <tunnel-id>
+   credentials-file: ~/.cloudflared/<tunnel-id>.json
+
+   ingress:
+     - hostname: privalk.your-domain.com
+       service: http://localhost:3000
+     - service: http_status:404
+   ```
+4. 启动隧道：
+   ```bash
+   cloudflared tunnel run privalk
+   ```
+
+你的朋友现在可以通过 `https://privalk.your-domain.com` 访问。
+
+> **安全警告：** Cloudflare Tunnel 会将你的 Privalk 实例暴露在公网上。请务必注意：
+> - 确保使用强密码保护 Cloudflare 账户并启用双因素认证
+> - 考虑在 Cloudflare Access 后面添加身份验证层
+> - 定期检查访问日志，监控异常活动
+> - 如果不需要公网访问，建议使用局域网或 VPN 方案
+
+---
+
 ## HTTPS 设置
 
 麦克风访问需要 HTTPS 连接（浏览器强制要求）。
@@ -60,7 +98,7 @@ pm2 save && pm2 startup
 ```bash
 sudo apt install mkcert libnss3-tools
 mkcert -install
-mkcert -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 YOUR_TAILSCALE_IP
+mkcert -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 YOUR_SERVER_IP
 ```
 
 然后更新服务器使用 HTTPS：
