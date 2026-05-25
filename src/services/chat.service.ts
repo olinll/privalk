@@ -47,9 +47,12 @@ export function createMessage(
 export function addMessageToRoom(roomId: string, message: Message): void {
   if (!rooms[roomId]) return;
 
-  rooms[roomId].messages.push(message);
-  if (rooms[roomId].messages.length > 200) {
-    rooms[roomId].messages.shift();
+  // 私密会话不存储消息
+  if (!rooms[roomId].isPrivate) {
+    rooms[roomId].messages.push(message);
+    if (rooms[roomId].messages.length > 200) {
+      rooms[roomId].messages.shift();
+    }
   }
 
   // 清除输入状态
