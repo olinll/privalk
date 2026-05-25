@@ -6,6 +6,7 @@
   <title>Privalk - 私密语音聊天</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <script src="/js/tailwind.js"></script>
+  <script src="/js/html2canvas.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1034,34 +1035,123 @@ fileInput.addEventListener('change', (e) => {
   fileInput.value = '';
 });
 
-// ── 截图功能 ──
+// ── 截图功能（区域截图）──
 const screenshotBtn = $('screenshot-btn');
+
+function showRegionSelector(pageCanvas) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;cursor:crosshair;overflow:hidden;';
+
+    const bgImg = document.createElement('img');
+    bgImg.src = pageCanvas.toDataURL();
+    bgImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(0.7);pointer-events:none;';
+
+    const hint = document.createElement('div');
+    hint.textContent = '拖拽选择截图区域，按 ESC 取消';
+    hint.style.cssText = 'position:absolute;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;padding:8px 20px;border-radius:8px;font-size:14px;pointer-events:none;z-index:10;';
+
+    const selectionBox = document.createElement('div');
+    selectionBox.style.cssText = 'position:absolute;border:2px dashed #4f7dff;background:rgba(79,125,255,0.1);display:none;pointer-events:none;';
+
+    const sizeLabel = document.createElement('div');
+    sizeLabel.style.cssText = 'position:absolute;background:rgba(0,0,0,0.7);color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;pointer-events:none;display:none;';
+
+    overlay.appendChild(bgImg);
+    overlay.appendChild(selectionBox);
+    overlay.appendChild(sizeLabel);
+    overlay.appendChild(hint);
+    document.body.appendChild(overlay);
+
+    let startX, startY, isDragging = false;
+
+    function onEsc(e) {
+      if (e.key === 'Escape') {
+        cleanup();
+        resolve(null);
+      }
+    }
+
+    function cleanup() {
+      document.removeEventListener('keydown', onEsc);
+      overlay.remove();
+    }
+
+    document.addEventListener('keydown', onEsc);
+
+    overlay.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      selectionBox.style.display = 'block';
+      hint.style.display = 'none';
+    });
+
+    overlay.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const x = Math.min(startX, e.clientX);
+      const y = Math.min(startY, e.clientY);
+      const w = Math.abs(e.clientX - startX);
+      const h = Math.abs(e.clientY - startY);
+      selectionBox.style.left = x + 'px';
+      selectionBox.style.top = y + 'px';
+      selectionBox.style.width = w + 'px';
+      selectionBox.style.height = h + 'px';
+      sizeLabel.textContent = `${w} × ${h}`;
+      sizeLabel.style.left = (x + w + 8) + 'px';
+      sizeLabel.style.top = (y + h + 8) + 'px';
+      sizeLabel.style.display = 'block';
+    });
+
+    overlay.addEventListener('mouseup', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      const x = Math.min(startX, e.clientX);
+      const y = Math.min(startY, e.clientY);
+      const w = Math.abs(e.clientX - startX);
+      const h = Math.abs(e.clientY - startY);
+      cleanup();
+      if (w < 10 || h < 10) {
+        resolve(null);
+        return;
+      }
+      // 计算实际页面坐标（考虑滚动和缩放）
+      const scaleX = pageCanvas.width / window.innerWidth;
+      const scaleY = pageCanvas.height / window.innerHeight;
+      resolve({
+        x: Math.round(x * scaleX),
+        y: Math.round(y * scaleY),
+        w: Math.round(w * scaleX),
+        h: Math.round(h * scaleY),
+      });
+    });
+  });
+}
+
+function cropCanvas(srcCanvas, region) {
+  const cropCanvas = document.createElement('canvas');
+  cropCanvas.width = region.w;
+  cropCanvas.height = region.h;
+  const ctx = cropCanvas.getContext('2d');
+  ctx.drawImage(srcCanvas, region.x, region.y, region.w, region.h, 0, 0, region.w, region.h);
+  return cropCanvas;
+}
+
 screenshotBtn.addEventListener('click', async () => {
   if (!currentRoom) return toast('请先加入频道', 'error');
   try {
-    const stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' } });
-    const video = document.createElement('video');
-    video.srcObject = stream;
-    await video.play();
-
-    // 等待一帧渲染
-    await new Promise(r => requestAnimationFrame(r));
-
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-
-    // 停止所有轨道
-    stream.getTracks().forEach(t => t.stop());
-
-    canvas.toBlob(blob => {
+    toast('正在捕获页面...', 'success');
+    const pageCanvas = await html2canvas(document.body, { useCORS: true, scale: window.devicePixelRatio || 1 });
+    const region = await showRegionSelector(pageCanvas);
+    if (!region) return;
+    const cropped = cropCanvas(pageCanvas, region);
+    cropped.toBlob(blob => {
       if (!blob) return toast('截图失败', 'error');
       const file = new File([blob], `screenshot_${Date.now()}.png`, { type: 'image/png' });
       uploadFile(file);
     }, 'image/png');
   } catch (err) {
-    if (err.name !== 'AbortError') toast('截图取消或失败', 'error');
+    toast('截图失败: ' + err.message, 'error');
   }
 });
 
