@@ -12,9 +12,9 @@ Privalk 是一个私密的、自托管的语音和文字聊天应用，专为厌
 
 大多数语音聊天应用是免费的，因为*你*就是产品。你的对话通过别人的服务器传递，你的数据被记录，你距离失去访问权限只有一个政策变化。
 
-Privalk 反其道而行。你托管它。你控制它。你的朋友通过你的私人 Tailscale 网络连接——其他人甚至看不到服务器的存在。
+Privalk 反其道而行。你托管它。你控制它。数据不会离开你的服务器。
 
-- **完全私密** — 只有你邀请的人才能通过 Tailscale VPN 访问
+- **完全私密** — 只有你邀请的人才能访问
 - **自托管** — 运行在你的机器、Proxmox 服务器或任何 Linux 主机上
 - **为游戏而生** — 低延迟 WebRTC 音频，永久在线频道
 - **语音 + 文字** — 在语音频道旁边聊天，支持 Markdown 渲染
@@ -48,18 +48,6 @@ npm install -g pm2
 pm2 start dist/index.js --name privalk
 pm2 save && pm2 startup
 ```
-
----
-
-## 通过 Tailscale 与朋友连接
-
-Privalk 设计为通过 [Tailscale](https://tailscale.com) 工作——一个在你的设备之间创建私人网络的零配置 VPN。你的 tailnet 之外的任何人都无法访问你的服务器。
-
-**设置步骤：**
-1. 在服务器上安装 Tailscale：`curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up`
-2. 在每个朋友的设备上安装 Tailscale — [tailscale.com/download](https://tailscale.com/download)
-3. 邀请朋友：[login.tailscale.com/admin/invite](https://login.tailscale.com/admin/invite)
-4. 发送你的 Tailscale IP 给他们，告诉他们在 Firefox 中访问 `https://100.x.x.x`
 
 ---
 
