@@ -320,6 +320,9 @@
         <div id="typing-indicator" class="py-1 px-5 text-[11px] text-squawk-text-dim italic min-h-[22px] shrink-0 font-medium"></div>
         <div class="py-3 px-4 border-t border-squawk-border flex gap-2.5 items-end bg-squawk-bg2 shrink-0">
           <input type="file" id="file-input" class="hidden" accept="image/*,video/*,audio/*,.pdf,.zip,.rar,.doc,.docx,.txt">
+          <button class="w-[38px] h-[38px] rounded-xl border border-squawk-border bg-squawk-bg3 text-squawk-text-mid cursor-pointer flex items-center justify-center transition-all hover:border-squawk-blue hover:text-squawk-blue hover:bg-squawk-blue-soft disabled:opacity-20 disabled:cursor-not-allowed shrink-0" id="screenshot-btn" disabled title="截图">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </button>
           <button class="w-[38px] h-[38px] rounded-xl border border-squawk-border bg-squawk-bg3 text-squawk-text-mid cursor-pointer flex items-center justify-center transition-all hover:border-squawk-blue hover:text-squawk-blue hover:bg-squawk-blue-soft disabled:opacity-20 disabled:cursor-not-allowed shrink-0" id="file-btn" disabled title="发送文件">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           </button>
@@ -767,7 +770,7 @@ async function joinRoom(roomId){
   roomScreen.classList.remove('hidden'); roomScreen.classList.add('flex'); welcomeScreen.style.display='none';
   selfStatus.textContent=roomId; selfStatus.className='text-[10px] text-squawk-blue mt-px font-medium';
   muteBtn.disabled=false; leaveBtn.disabled=false; orbBtn.disabled=false;
-  chatInput.disabled=false; sendBtn.disabled=false;
+  chatInput.disabled=false; sendBtn.disabled=false; screenshotBtn.disabled=false;
   document.querySelectorAll('.room-item').forEach(el=>el.classList.toggle('active',el.dataset.roomId===roomId));
 }
 
@@ -860,7 +863,7 @@ function leaveRoom(){
   typingIndicator.textContent=''; ownerBadge.classList.add('hidden');
   selfStatus.textContent='空闲'; selfStatus.className='text-[10px] text-squawk-text-dim mt-px font-medium';
   muteBtn.disabled=true; leaveBtn.disabled=true; orbBtn.disabled=true;
-  chatInput.disabled=true; chatInput.value=''; sendBtn.disabled=true; stopTyping();
+  chatInput.disabled=true; chatInput.value=''; sendBtn.disabled=true; screenshotBtn.disabled=true; stopTyping();
   document.querySelectorAll('.room-item').forEach(el=>el.classList.remove('active'));
 }
 leaveBtn.addEventListener('click',leaveRoom);
@@ -989,6 +992,37 @@ fileInput.addEventListener('change', (e) => {
   fileInput.value = '';
 });
 
+// ── 截图功能 ──
+const screenshotBtn = $('screenshot-btn');
+screenshotBtn.addEventListener('click', async () => {
+  if (!currentRoom) return toast('请先加入频道', 'error');
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' } });
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    await video.play();
+
+    // 等待一帧渲染
+    await new Promise(r => requestAnimationFrame(r));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+
+    // 停止所有轨道
+    stream.getTracks().forEach(t => t.stop());
+
+    canvas.toBlob(blob => {
+      if (!blob) return toast('截图失败', 'error');
+      const file = new File([blob], `screenshot_${Date.now()}.png`, { type: 'image/png' });
+      uploadFile(file);
+    }, 'image/png');
+  } catch (err) {
+    if (err.name !== 'AbortError') toast('截图取消或失败', 'error');
+  }
+});
+
 function uploadFile(file) {
   if(currentRoomPrivate){
     // 私密会话：Base64 传输
@@ -1071,6 +1105,7 @@ function updateChatButtons() {
   const enabled = !!currentRoom;
   fileBtn.disabled = !enabled;
   emojiBtn.disabled = !enabled;
+  screenshotBtn.disabled = !enabled;
 }
 
 // 在加入/离开频道时更新按钮状态
