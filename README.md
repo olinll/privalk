@@ -15,7 +15,7 @@ Privalk 是一个私密的、自托管的语音和文字聊天应用，专为厌
 Privalk 反其道而行。你托管它。你控制它。数据不会离开你的服务器。
 
 - **完全私密** — 只有你邀请的人才能访问
-- **自托管** — 运行在你的机器、Proxmox 服务器或任何 Linux 主机上
+- **自托管** — 运行在你的机器、Proxmox 服务器或任何主机上
 - **为游戏而生** — 低延迟 WebRTC 音频，永久在线频道
 - **语音 + 文字** — 在语音频道旁边聊天，支持 Markdown 渲染
 - **频道所有权** — 踢出用户、重命名和删除频道、管理你的空间
@@ -25,17 +25,45 @@ Privalk 反其道而行。你托管它。你控制它。数据不会离开你的
 - **粘贴上传** — 在聊天输入框中粘贴图片自动上传
 - **亮色/暗色主题** — 自动检测系统主题，支持手动切换
 - **消息持久化** — 每个频道独立存储聊天记录，重启不丢失
+- **私密会话** — 不存储消息，图片 Base64 传输，支持密码保护
+- **完全本地化** — 所有字体、CSS、JS 文件本地化，无外部依赖
 
 ---
 
 ## 快速开始
+
+### 使用管理脚本（推荐）
+
+```bash
+git clone https://github.com/olinll/privalk.git
+cd privalk
+
+# Linux / macOS
+chmod +x privalk.sh
+./privalk.sh install    # 安装依赖并构建
+./privalk.sh start      # 启动服务
+
+# Windows
+privalk.cmd install     # 安装依赖并构建
+privalk.cmd start       # 启动服务
+```
+
+**管理脚本命令：**
+
+| 命令 | 说明 |
+|------|------|
+| `install` | 安装依赖并构建项目 |
+| `start` | 启动服务（使用 PM2） |
+| `stop` | 停止服务 |
+| `status` | 查看服务状态和日志 |
+| `pull` | 拉取更新并重新构建重启 |
 
 ### 手动安装
 
 需要 [Node.js 18+](https://nodejs.org)。
 
 ```bash
-git clone https://github.com/your-username/privalk.git
+git clone https://github.com/olinll/privalk.git
 cd privalk
 npm install
 npm run build
@@ -134,7 +162,7 @@ const server = https.createServer({
 
 ### 频道权限
 
-创建频道的人就是**频道主**，用 👑 皇冠标识。如果频道主离开，所有权会转移给下一个人。
+创建频道的人就是**频道主**，用 👑 皇冠标识。频道主信息持久化保存，重启后不会丢失。如果频道主离开，所有权会转移给下一个人。
 
 | 操作 | 频道主 | 成员 |
 |------|:------:|:----:|
@@ -148,6 +176,13 @@ const server = https.createServer({
 **如何使用频道主控制：**
 - **桌面端** — 右键点击侧边栏中的频道进行重命名或删除。右键点击用户磁贴进行踢出。
 - **移动端** — 长按频道或用户磁贴。
+
+### 私密会话
+
+创建频道时可勾选"私密会话"，开启后：
+- 消息不会存储在服务器内存和磁盘
+- 图片使用 Base64 编码传输，不上传到服务器
+- 可设置密码保护，加入时需要输入密码
 
 ### 创建频道默认静音
 
@@ -163,6 +198,11 @@ const server = https.createServer({
 - 频道列表和成员面板支持向左折叠
 - 折叠后显示首字母头像
 - 折叠状态自动保存
+
+### 表情选择器
+
+- 点击表情按钮弹出选择框
+- 支持滚动浏览，点击外部自动关闭
 
 ---
 
@@ -193,8 +233,8 @@ Privalk 以隐私和安全为首要原则：
 - **输入清理** — 所有用户名、频道名称和消息在服务端验证
 - **原型污染保护** — `rooms` 对象使用 `Object.create(null)` 并有保留键黑名单
 - **房间范围 WebRTC 中继** — 信令仅在同一频道内的对等点之间转发
-- **严格 CORS** — 仅接受来自 localhost 和 Tailscale IP 范围的连接
 - **安全头** — CSP、X-Frame-Options、X-Content-Type-Options、Referrer-Policy
+- **私密会话密码** — 私密频道支持密码保护
 
 ---
 
@@ -211,7 +251,7 @@ Privalk 以隐私和安全为首要原则：
 | 文件上传 | Multer（最大 50MB） |
 | 持久化 | JSON 文件存储 |
 
-无数据库。无外部服务。无遥测。
+无数据库。无外部服务。无遥测。完全本地化，无外部依赖。
 
 ---
 
@@ -230,13 +270,19 @@ privalk/
 │   └── public/
 │       ├── index.html        # 前端界面
 │       ├── favicon.svg       # 网站图标
-│       └── js/
-│           └── tailwind.js   # Tailwind CSS
+│       ├── js/
+│       │   └── tailwind.js   # Tailwind CSS
+│       └── fonts/
+│           ├── fonts.css     # 字体样式
+│           ├── noto-sans-sc-*.ttf  # Noto Sans SC 字体
+│           └── plus-jakarta-sans-*.ttf  # Plus Jakarta Sans 字体
 ├── data/                     # 持久化数据
-│   ├── channels.json         # 频道列表
+│   ├── channels.json         # 频道列表（含频道主信息）
 │   └── chat/                 # 每个频道的聊天记录
 ├── dist/                     # 编译输出（自动生成）
 ├── uploads/                  # 上传文件存储
+├── privalk.sh                # Linux/Mac 管理脚本
+├── privalk.cmd               # Windows 管理脚本
 ├── package.json
 ├── tsconfig.json
 └── README.md
