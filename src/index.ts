@@ -113,9 +113,9 @@ io.on("connection", (socket: CustomSocket) => {
     const cleanName = sanitiseName(userName);
     if (!cleanRoom || !cleanName) return;
 
-    // 验证私密频道密码
+    // 验证私密频道密码（频道主不需要密码）
     if (rooms[cleanRoom]?.isPrivate && rooms[cleanRoom]?.password) {
-      if (password !== rooms[cleanRoom].password) {
+      if (cleanName !== rooms[cleanRoom].owner && password !== rooms[cleanRoom].password) {
         if (typeof cb === "function") cb({ error: "密码错误" });
         return;
       }
