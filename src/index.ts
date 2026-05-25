@@ -163,7 +163,10 @@ io.on("connection", (socket: CustomSocket) => {
 
   // ── 聊天消息 ──
   socket.on("chat-message", guard(({ text, fileUrl, fileName, fileType }: { text: string; fileUrl?: string; fileName?: string; fileType?: string }) => {
-    if (!socket.currentRoom || !rooms[socket.currentRoom]) return;
+    if (!socket.currentRoom || !rooms[socket.currentRoom]) {
+      console.log(`[!] 消息发送失败: socket.currentRoom=${socket.currentRoom}, 房间存在=${!!rooms[socket.currentRoom || '']}`);
+      return;
+    }
     const cleanText = sanitiseText(text);
     if (!cleanText && !fileUrl) return;
 
@@ -177,6 +180,9 @@ io.on("connection", (socket: CustomSocket) => {
     );
 
     addMessageToRoom(socket.currentRoom, msg);
+
+    const roomSockets = io.sockets.adapter.rooms.get(socket.currentRoom);
+    console.log(`[~] 消息发送: 房间=${socket.currentRoom}, 在线人数=${roomSockets?.size || 0}, 私密=${rooms[socket.currentRoom].isPrivate}`);
 
     io.to(socket.currentRoom).emit("chat-message", msg);
     io.to(socket.currentRoom).emit("typing-update", {
