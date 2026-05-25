@@ -37,6 +37,7 @@ const DATA_DIR = process.env.NODE_ENV === "production"
   ? path.join(__dirname, "..", "..", "data")
   : path.join(__dirname, "..", "..");
 const CHANNELS_FILE = path.join(DATA_DIR, "channels.json");
+const MESSAGES_FILE = path.join(DATA_DIR, "messages.json");
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -84,9 +85,34 @@ export function saveChannels(): void {
   }
 }
 
-// 初始化加载频道
+function loadMessages(): Record<string, Message[]> {
+  try {
+    if (!fs.existsSync(MESSAGES_FILE)) return {};
+    const raw = JSON.parse(fs.readFileSync(MESSAGES_FILE, "utf8"));
+    if (typeof raw !== "object" || raw === null) return {};
+    return raw;
+  } catch (e: unknown) {
+    console.error("加载消息失败:", e instanceof Error ? e.message : e);
+    return {};
+  }
+}
+
+export function saveMessages(): void {
+  try {
+    const data: Record<string, Message[]> = {};
+    for (const [name, room] of Object.entries(rooms)) {
+      if (room.messages.length > 0) data[name] = room.messages;
+    }
+    fs.writeFileSync(MESSAGES_FILE, JSON.stringify(data, null, 2));
+  } catch (e: unknown) {
+    console.error("保存消息失败:", e instanceof Error ? e.message : e);
+  }
+}
+
+// 初始化加载频道和消息
+const savedMessages = loadMessages();
 for (const name of loadChannels()) {
-  rooms[name] = { users: new Map(), messages: [], owner: null, defaultMuted: false };
+  rooms[name] = { users: new Map(), messages: savedMessages[name] || [], owner: null, defaultMuted: false };
   typingUsers[name] = new Set();
 }
 console.log(`[~] 已加载 ${Object.keys(rooms).length} 个频道:`, Object.keys(rooms));

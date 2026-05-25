@@ -1,4 +1,4 @@
-import { rooms, typingUsers, Message, getRoomUsers } from "./room.service";
+import { rooms, typingUsers, Message, getRoomUsers, saveMessages } from "./room.service";
 
 // ── 常量 ──
 export const MAX_MSG_LEN = 500;
@@ -56,6 +56,8 @@ export function addMessageToRoom(roomId: string, message: Message): void {
   if (typingUsers[roomId]) {
     typingUsers[roomId].delete(message.name);
   }
+
+  saveMessages();
 }
 
 export function getRoomMessages(roomId: string, limit: number = 50): Message[] {
