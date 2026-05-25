@@ -110,6 +110,12 @@
     .light .shadow-black\/50 { --tw-shadow-color: rgba(0,0,0,0.2) !important; }
     .light .shadow-black\/30 { --tw-shadow-color: rgba(0,0,0,0.1) !important; }
     .light .shadow-black\/40 { --tw-shadow-color: rgba(0,0,0,0.15) !important; }
+    .light #header { background-color: var(--bg3) !important; border-color: var(--border) !important; }
+    .light #controls { background-color: var(--bg2) !important; border-color: var(--border) !important; }
+    .light #sidebar { background-color: var(--bg2) !important; border-color: var(--border) !important; }
+    .light .bg-squawk-blue-soft { background-color: rgba(79,125,255,0.1) !important; }
+    .light .border-squawk-blue\/20 { border-color: rgba(79,125,255,0.2) !important; }
+    .light .shadow-squawk-blue-glow { --tw-shadow-color: rgba(79,125,255,0.15) !important; }
     #app { display:grid; grid-template-columns:240px 1fr; grid-template-rows:64px 1fr 72px; height:100vh; position:relative; z-index:1; grid-template-areas:"header header" "sidebar main" "controls controls"; }
     #sidebar { grid-area:sidebar; }
     #main { grid-area:main; }
@@ -117,11 +123,35 @@
     #header { grid-area:header; }
 
     .room-item.active::before { content:''; position:absolute; left:0; top:6px; bottom:6px; width:3px; border-radius:0 3px 3px 0; background:var(--tw-color-squawk-blue,#4f7dff); }
+    .msg-content pre { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px; margin: 4px 0; font-size: 12px; font-family: monospace; overflow-x: auto; white-space: pre-wrap; border: 1px solid var(--border); }
+    .msg-content code { background: rgba(0,0,0,0.15); padding: 2px 6px; border-radius: 4px; font-size: 12px; font-family: monospace; }
+    .msg-content pre code { background: none; padding: 0; border-radius: 0; }
+    .msg-content a { color: #6b93ff; text-decoration: underline; }
+    .msg-content a:hover { color: #4f7dff; }
+    .msg-content img { max-width: 300px; max-height: 200px; border-radius: 12px; object-fit: cover; cursor: pointer; margin-top: 4px; }
+    .msg-content li { margin-left: 16px; list-style: disc; }
+    .msg-content strong { font-weight: 700; }
+    .msg-content em { font-style: italic; }
+    .msg-content del { text-decoration: line-through; opacity: 0.6; }
+    .light .msg-content pre { background: rgba(0,0,0,0.06); border-color: var(--border2); }
+    .light .msg-content code { background: rgba(0,0,0,0.08); }
+    .light .msg-content a { color: #3b5bdb; }
+
+    .collapse-content { overflow: hidden; transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease; }
+    .collapse-content.collapsed { max-height: 0 !important; opacity: 0; }
+    .collapse-toggle { transition: transform 0.25s ease; }
+    .collapse-toggle.collapsed { transform: rotate(-90deg); }
+    .members-grid { transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease, padding 0.3s ease; overflow: hidden; }
+    .members-grid.collapsed { max-height: 0 !important; opacity: 0; padding-top: 0; padding-bottom: 0; }
 
     @media(max-width:768px){
       #app { grid-template-columns:1fr; grid-template-rows:64px 1fr 72px; grid-template-areas:"header" "main" "controls"; }
-      #sidebar { display:none; position:fixed; top:64px; left:0; bottom:72px; width:240px; z-index:100; box-shadow:4px 0 20px rgba(0,0,0,0.5); }
+      #sidebar { display:none; position:fixed; top:64px; left:0; bottom:72px; width:260px; z-index:100; box-shadow:4px 0 20px rgba(0,0,0,0.5); }
       #sidebar.open { display:flex; }
+      .voice-panel { flex: 0 0 auto !important; padding: 16px !important; }
+      .voice-panel .users-section { max-height: 200px; }
+      #room-screen { flex-direction: column !important; }
+      .chat-panel { border-left: none !important; border-top: 1px solid var(--border) !important; }
     }
   </style>
 </head>
@@ -153,11 +183,14 @@
 
   <!-- 侧边栏 -->
   <nav id="sidebar" class="flex flex-col gap-1 overflow-hidden bg-squawk-bg2 border-r border-squawk-border p-3.5">
-    <div class="text-[10px] font-bold tracking-[0.12em] uppercase text-squawk-text-dim px-2.5 mb-1.5 flex items-center justify-between">
-      频道
-      <button class="w-5 h-5 rounded-md bg-squawk-blue border-none text-white text-sm font-bold cursor-pointer flex items-center justify-center transition-all hover:bg-squawk-blue2 hover:scale-110 shadow-md shadow-squawk-blue-glow leading-none" id="open-create-modal">+</button>
+    <div class="text-[10px] font-bold tracking-[0.12em] uppercase text-squawk-text-dim px-2.5 mb-1.5 flex items-center justify-between cursor-pointer select-none" id="channels-header">
+      <div class="flex items-center gap-1.5">
+        <span class="collapse-toggle text-[10px]" id="channels-toggle">▼</span>
+        频道
+      </div>
+      <button class="w-5 h-5 rounded-md bg-squawk-blue border-none text-white text-sm font-bold cursor-pointer flex items-center justify-center transition-all hover:bg-squawk-blue2 hover:scale-110 shadow-md shadow-squawk-blue-glow leading-none" id="open-create-modal" onclick="event.stopPropagation()">+</button>
     </div>
-    <div id="room-list" class="flex-1 overflow-y-auto flex flex-col gap-0.5">
+    <div id="room-list" class="flex-1 overflow-y-auto flex flex-col gap-0.5 collapse-content" style="max-height:80vh">
       <div class="text-center py-8 px-3 text-squawk-text-dim text-xs leading-relaxed">
         <strong class="block text-sm text-squawk-text-mid font-bold mb-1">暂无频道</strong>
         点击 + 创建一个频道
@@ -192,7 +225,7 @@
     <!-- 频道屏幕 -->
     <div id="room-screen" class="hidden relative z-10 w-full h-full flex-row">
       <!-- 语音面板 -->
-      <div class="flex-[0_0_280px] flex flex-col items-center justify-center gap-5 p-7 border-r border-squawk-border">
+      <div class="voice-panel flex-[0_0_280px] flex flex-col items-center justify-center gap-5 p-7 border-r border-squawk-border">
         <div class="text-center">
           <div class="text-[10px] font-bold tracking-[0.12em] uppercase text-squawk-text-dim mb-1">当前在</div>
           <div class="flex items-center justify-center gap-2">
@@ -200,7 +233,16 @@
             <div class="hidden text-[11px] font-bold text-squawk-gold bg-squawk-gold/10 border border-squawk-gold/25 rounded-md py-0.5 px-1.5 whitespace-nowrap" id="owner-badge">👑 频道主</div>
           </div>
         </div>
-        <div id="users-grid" class="flex flex-wrap gap-2.5 justify-center"></div>
+        <div class="w-full">
+          <div class="flex items-center justify-between px-1 mb-2 cursor-pointer select-none" id="members-header">
+            <div class="text-[10px] font-bold tracking-[0.12em] uppercase text-squawk-text-dim flex items-center gap-1.5">
+              <span class="collapse-toggle text-[10px]" id="members-toggle">▼</span>
+              成员
+            </div>
+            <span class="text-[10px] text-squawk-text-dim font-medium" id="members-count">0 人</span>
+          </div>
+          <div id="users-grid" class="members-grid flex flex-wrap gap-2.5 justify-center" style="max-height:300px"></div>
+        </div>
         <div class="flex flex-col items-center gap-2.5">
           <button class="w-[60px] h-[60px] rounded-full bg-squawk-blue border-none flex items-center justify-center cursor-pointer transition-all shadow-[0_0_0_8px_var(--tw-color-squawk-blue-soft),0_8px_28px_var(--tw-color-squawk-blue-glow)] text-[22px] relative disabled:opacity-30 disabled:cursor-not-allowed hover:bg-squawk-blue2 hover:scale-105" id="orb-btn" disabled>
             🎤
@@ -396,6 +438,30 @@ function nameHash(n){let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))>>>0;retur
 function nameEmoji(n){return EMOJIS[nameHash(n)%EMOJIS.length];}
 function nameColor(n){return COLORS[nameHash(n)%COLORS.length];}
 function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function renderMd(text){
+  let s=escHtml(text);
+  // 代码块 ```
+  s=s.replace(/```([\s\S]*?)```/g,'<pre class="bg-black/20 rounded-lg p-2.5 my-1 text-[12px] font-mono overflow-x-auto whitespace-pre-wrap border border-squawk-border">$1</pre>');
+  // 行内代码
+  s=s.replace(/`([^`]+)`/g,'<code class="bg-black/15 px-1.5 py-0.5 rounded text-[12px] font-mono text-squawk-blue2">$1</code>');
+  // 粗体
+  s=s.replace(/\*\*(.+?)\*\*/g,'<strong class="font-bold">$1</strong>');
+  // 斜体
+  s=s.replace(/\*(.+?)\*/g,'<em class="italic">$1</em>');
+  // 删除线
+  s=s.replace(/~~(.+?)~~/g,'<del class="line-through opacity-60">$1</del>');
+  // 链接
+  s=s.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" class="text-squawk-blue underline hover:text-squawk-blue2">$1</a>');
+  // 图片 ![alt](url)
+  s=s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1" class="max-w-[300px] max-h-[200px] rounded-xl object-cover cursor-pointer mt-1" onclick="window.open(this.src)">');
+  // 无序列表
+  s=s.replace(/(^|\n)[-*] (.+?)(?=\n|$)/g,'$1<li class="ml-4 list-disc">$2</li>');
+  // 引用
+  s=s.replace(/(^|\n)&gt; (.+?)(?=\n|$)/g,'$1<div class="border-l-2 border-squawk-blue/40 pl-3 py-0.5 my-1 text-squawk-text-mid italic">$2</div>');
+  // 换行
+  s=s.replace(/\n/g,'<br>');
+  return s;
+}
 function formatTime(ts){const d=new Date(ts);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
 function toast(msg,type=''){const t=document.createElement('div');t.className=`px-3.5 py-2.5 bg-squawk-bg3 border border-squawk-border2 rounded-xl text-xs font-semibold shadow-lg shadow-black/40 animate-toast-in ${type==='error'?'border-squawk-red/40 text-squawk-red':'border-squawk-blue/40 text-squawk-blue2'}`;t.textContent=msg;$('toast-container').appendChild(t);setTimeout(()=>t.remove(),3100);}
 function isOwner(){return userName===currentOwner;}
@@ -423,6 +489,21 @@ themeBtn.addEventListener('click',()=>{
   const isLight=document.documentElement.classList.contains('light');
   applyTheme(isLight?'dark':'light');
 });
+
+// ── 折叠功能 ──
+function setupCollapse(headerId, contentId, toggleId, storageKey){
+  const header=$(headerId), content=$(contentId), toggle=$(toggleId);
+  if(!header||!content||!toggle)return;
+  const collapsed=localStorage.getItem(storageKey)==='true';
+  if(collapsed){content.classList.add('collapsed');toggle.classList.add('collapsed');}
+  header.addEventListener('click',()=>{
+    const isCollapsed=content.classList.toggle('collapsed');
+    toggle.classList.toggle('collapsed',isCollapsed);
+    localStorage.setItem(storageKey,isCollapsed);
+  });
+}
+setupCollapse('channels-header','room-list','channels-toggle','privalk-channels-collapsed');
+setupCollapse('members-header','users-grid','members-toggle','privalk-members-collapsed');
 
 // ── 右键菜单 ──
 let ctxRoomId=null, ctxTargetSocketId=null, ctxTargetName=null, longPressTimer=null;
@@ -638,11 +719,11 @@ function renderMessage(msg){
     } else {
       content = `<a href="${escHtml(msg.fileUrl)}" target="_blank" class="text-squawk-blue underline flex items-center gap-1">📎 ${escHtml(msg.fileName||'文件')}</a>`;
     }
-    if(msg.text) content += `<div class="mt-1">${escHtml(msg.text)}</div>`;
+    if(msg.text) content += `<div class="mt-1">${renderMd(msg.text)}</div>`;
   } else {
-    content = escHtml(msg.text);
+    content = renderMd(msg.text);
   }
-  el.innerHTML=`<div class="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center text-base mt-0.5 border border-squawk-border" style="background:linear-gradient(135deg,${c1},${c2})">${nameEmoji(msg.name)}</div><div class="max-w-[72%] flex flex-col gap-0.5${isSelf?' items-end':''}"><div class="flex items-baseline gap-1.5${isSelf?' flex-row-reverse':''}"><span class="text-[11px] font-bold text-squawk-text-mid">${escHtml(msg.name)}</span><span class="font-mono text-[10px] text-squawk-text-dim">${formatTime(msg.ts)}</span></div><div class="py-2 px-3 rounded-2xl text-[13px] leading-relaxed break-words font-medium${isSelf?' bg-squawk-blue text-white rounded-tl-sm shadow-md shadow-squawk-blue-glow':' bg-squawk-bg3 border border-squawk-border text-squawk-text rounded-tl-sm'}">${content}</div></div>`;
+  el.innerHTML=`<div class="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center text-base mt-0.5 border border-squawk-border" style="background:linear-gradient(135deg,${c1},${c2})">${nameEmoji(msg.name)}</div><div class="max-w-[72%] flex flex-col gap-0.5${isSelf?' items-end':''}"><div class="flex items-baseline gap-1.5${isSelf?' flex-row-reverse':''}"><span class="text-[11px] font-bold text-squawk-text-mid">${escHtml(msg.name)}</span><span class="font-mono text-[10px] text-squawk-text-dim">${formatTime(msg.ts)}</span></div><div class="msg-content py-2 px-3 rounded-2xl text-[13px] leading-relaxed break-words font-medium${isSelf?' bg-squawk-blue text-white rounded-tl-sm shadow-md shadow-squawk-blue-glow':' bg-squawk-bg3 border border-squawk-border text-squawk-text rounded-tl-sm'}">${content}</div></div>`;
   chatMessages.appendChild(el);
 }
 function scrollChat(){chatMessages.scrollTop=chatMessages.scrollHeight;}
@@ -703,6 +784,7 @@ orbBtn.addEventListener('click',toggleMute);
 // ── 渲染用户 ──
 function renderUsers(users){
   usersGrid.innerHTML='';
+  $('members-count').textContent=users.length+' 人';
   for(const user of users){
     const isSelf=user.socketId===socket.id, tile=document.createElement('div');
     const isUserOwner=user.name===currentOwner;
