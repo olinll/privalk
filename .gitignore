@@ -2,6 +2,7 @@ node_modules/
 npm-debug.log
 channels.json
 messages.json
+chat/
 .env
 .env.*
 *.pem

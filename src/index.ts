@@ -8,6 +8,7 @@ import {
   rooms,
   typingUsers,
   saveChannels,
+  markChannelDeleted,
   getRoomList,
   getRoomUsers,
   sanitiseName,
@@ -246,6 +247,7 @@ io.on("connection", (socket: CustomSocket) => {
     if (rooms[cleanRoom].owner !== socket.userName) return cb({ error: "没有权限" });
 
     io.to(cleanRoom).emit("channel-deleted", { roomId: cleanRoom });
+    markChannelDeleted(cleanRoom);
     delete rooms[cleanRoom];
     if (typingUsers[cleanRoom]) delete typingUsers[cleanRoom];
     saveChannels();

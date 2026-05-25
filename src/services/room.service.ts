@@ -37,9 +37,17 @@ const DATA_DIR = process.env.NODE_ENV === "production"
   ? path.join(__dirname, "..", "..", "data")
   : path.join(__dirname, "..", "..");
 const CHANNELS_FILE = path.join(DATA_DIR, "channels.json");
-const MESSAGES_FILE = path.join(DATA_DIR, "messages.json");
+const CHAT_DIR = path.join(DATA_DIR, "chat");
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!fs.existsSync(CHAT_DIR)) fs.mkdirSync(CHAT_DIR, { recursive: true });
+
+interface ChannelChatFile {
+  name: string;
+  createdAt: string;
+  deletedAt: string | null;
+  messages: Message[];
+}
 
 // ── 输入清理 ──
 export function sanitiseName(raw: unknown): string | null {
@@ -85,34 +93,63 @@ export function saveChannels(): void {
   }
 }
 
-function loadMessages(): Record<string, Message[]> {
+function chatFilePath(name: string): string {
+  const safe = name.replace(/[^a-zA-Z0-9\u4e00-\u9fff_-]/g, '_');
+  return path.join(CHAT_DIR, `${safe}.json`);
+}
+
+function loadChannelChat(name: string): Message[] {
   try {
-    if (!fs.existsSync(MESSAGES_FILE)) return {};
-    const raw = JSON.parse(fs.readFileSync(MESSAGES_FILE, "utf8"));
-    if (typeof raw !== "object" || raw === null) return {};
-    return raw;
-  } catch (e: unknown) {
-    console.error("加载消息失败:", e instanceof Error ? e.message : e);
-    return {};
+    const fp = chatFilePath(name);
+    if (!fs.existsSync(fp)) return [];
+    const raw: ChannelChatFile = JSON.parse(fs.readFileSync(fp, "utf8"));
+    if (raw.deletedAt) return [];
+    return Array.isArray(raw.messages) ? raw.messages : [];
+  } catch {
+    return [];
   }
 }
 
-export function saveMessages(): void {
+export function saveChannelChat(name: string): void {
   try {
-    const data: Record<string, Message[]> = {};
-    for (const [name, room] of Object.entries(rooms)) {
-      if (room.messages.length > 0) data[name] = room.messages;
-    }
-    fs.writeFileSync(MESSAGES_FILE, JSON.stringify(data, null, 2));
+    const room = rooms[name];
+    if (!room) return;
+    const fp = chatFilePath(name);
+    const data: ChannelChatFile = {
+      name,
+      createdAt: fs.existsSync(fp)
+        ? (JSON.parse(fs.readFileSync(fp, "utf8")).createdAt || new Date().toISOString())
+        : new Date().toISOString(),
+      deletedAt: null,
+      messages: room.messages,
+    };
+    fs.writeFileSync(fp, JSON.stringify(data, null, 2));
   } catch (e: unknown) {
-    console.error("保存消息失败:", e instanceof Error ? e.message : e);
+    console.error("保存频道消息失败:", e instanceof Error ? e.message : e);
+  }
+}
+
+export function markChannelDeleted(name: string): void {
+  try {
+    const fp = chatFilePath(name);
+    if (fs.existsSync(fp)) {
+      const raw: ChannelChatFile = JSON.parse(fs.readFileSync(fp, "utf8"));
+      raw.deletedAt = new Date().toISOString();
+      fs.writeFileSync(fp, JSON.stringify(raw, null, 2));
+    }
+    // 重命名文件以区分同名频道
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const safe = name.replace(/[^a-zA-Z0-9\u4e00-\u9fff_-]/g, '_');
+    const newPath = path.join(CHAT_DIR, `${safe}_deleted_${ts}.json`);
+    if (fs.existsSync(fp)) fs.renameSync(fp, newPath);
+  } catch (e: unknown) {
+    console.error("标记频道删除失败:", e instanceof Error ? e.message : e);
   }
 }
 
 // 初始化加载频道和消息
-const savedMessages = loadMessages();
 for (const name of loadChannels()) {
-  rooms[name] = { users: new Map(), messages: savedMessages[name] || [], owner: null, defaultMuted: false };
+  rooms[name] = { users: new Map(), messages: loadChannelChat(name), owner: null, defaultMuted: false };
   typingUsers[name] = new Set();
 }
 console.log(`[~] 已加载 ${Object.keys(rooms).length} 个频道:`, Object.keys(rooms));
