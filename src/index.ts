@@ -92,14 +92,15 @@ io.on("connection", (socket: CustomSocket) => {
   };
 
   // ── 创建频道 ──
-  socket.on("create-room", guard(({ roomName, defaultMuted, isPrivate }: { roomName: string; defaultMuted?: boolean; isPrivate?: boolean }, cb: Function) => {
+  socket.on("create-room", guard(({ roomName, defaultMuted, isPrivate, password }: { roomName: string; defaultMuted?: boolean; isPrivate?: boolean; password?: string }, cb: Function) => {
     if (typeof cb !== "function") return;
     const name = sanitiseRoomName(roomName);
     if (!name) return cb({ error: "频道名称无效" });
     if (rooms[name]) return cb({ error: "频道已存在" });
     if (Object.keys(rooms).length >= MAX_ROOMS) return cb({ error: "已达到最大频道数" });
 
-    rooms[name] = { users: new Map(), messages: [], owner: null, defaultMuted: !!defaultMuted, isPrivate: !!isPrivate };
+    const roomPassword = isPrivate && password ? password.trim() : null;
+    rooms[name] = { users: new Map(), messages: [], owner: null, defaultMuted: !!defaultMuted, isPrivate: !!isPrivate, password: roomPassword };
     typingUsers[name] = new Set();
     saveChannels();
     io.emit("room-list", getRoomList());
@@ -107,16 +108,24 @@ io.on("connection", (socket: CustomSocket) => {
   }));
 
   // ── 加入频道 ──
-  socket.on("join-room", guard(({ roomId, userName }: { roomId: string; userName: string }) => {
+  socket.on("join-room", guard(({ roomId, userName, password }: { roomId: string; userName: string; password?: string }, cb?: Function) => {
     const cleanRoom = sanitiseRoomName(roomId);
     const cleanName = sanitiseName(userName);
     if (!cleanRoom || !cleanName) return;
+
+    // 验证私密频道密码
+    if (rooms[cleanRoom]?.isPrivate && rooms[cleanRoom]?.password) {
+      if (password !== rooms[cleanRoom].password) {
+        if (typeof cb === "function") cb({ error: "密码错误" });
+        return;
+      }
+    }
 
     if (socket.currentRoom) leaveRoom(socket);
 
     if (!rooms[cleanRoom]) {
       if (Object.keys(rooms).length >= MAX_ROOMS) return;
-      rooms[cleanRoom] = { users: new Map(), messages: [], owner: null, defaultMuted: false, isPrivate: false };
+      rooms[cleanRoom] = { users: new Map(), messages: [], owner: null, defaultMuted: false, isPrivate: false, password: null };
       typingUsers[cleanRoom] = new Set();
     }
     if (!typingUsers[cleanRoom]) typingUsers[cleanRoom] = new Set();

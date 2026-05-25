@@ -455,9 +455,27 @@
       <input type="checkbox" id="private-checkbox" class="w-4 h-4 rounded border-squawk-border2 bg-white/5 text-squawk-blue focus:ring-squawk-blue focus:ring-offset-0">
       <span class="text-[13px] font-medium text-squawk-text-mid">私密会话（不存储消息，图片 Base64 传输）</span>
     </label>
+    <div id="password-wrap" class="hidden">
+      <div class="text-[11px] font-bold text-squawk-text-dim tracking-[0.08em] uppercase mb-1">频道密码</div>
+      <input class="w-full bg-white/5 border border-squawk-border2 rounded-xl py-3 px-4 text-squawk-text font-medium text-sm outline-none transition-all focus:border-squawk-blue focus:shadow-[0_0_0_3px_var(--tw-color-squawk-blue-soft)] focus:bg-squawk-blue/5 placeholder:text-squawk-text-dim placeholder:font-normal" id="new-room-password" placeholder="设置加入密码..." maxlength="32"/>
+    </div>
     <div class="flex gap-2 mt-1">
       <button class="flex-1 bg-white/5 border border-squawk-border rounded-xl text-squawk-text-mid text-[13px] font-bold py-3 cursor-pointer transition-all hover:border-squawk-border2 hover:text-squawk-text" id="cancel-create">取消</button>
       <button class="flex-1 bg-squawk-blue text-white text-[13px] font-bold border-none rounded-xl py-3 cursor-pointer transition-all hover:bg-squawk-blue2 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-squawk-blue-glow" id="confirm-create">创建 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- 密码输入弹窗 -->
+<div class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] backdrop-blur-[10px]" id="password-modal">
+  <div class="bg-squawk-bg3 border border-squawk-border2 rounded-[20px] p-6 w-[320px] flex flex-col gap-3.5 shadow-2xl shadow-black/50">
+    <div class="text-xl font-extrabold tracking-tight">输入<span class="text-squawk-blue">密码</span></div>
+    <div class="text-[11px] font-bold text-squawk-text-dim tracking-[0.08em] uppercase">频道密码</div>
+    <input class="w-full bg-white/5 border border-squawk-border2 rounded-xl py-3 px-4 text-squawk-text font-medium text-sm outline-none transition-all focus:border-squawk-blue focus:shadow-[0_0_0_3px_var(--tw-color-squawk-blue-soft)] focus:bg-squawk-blue/5 placeholder:text-squawk-text-dim placeholder:font-normal" id="password-input" placeholder="请输入密码..." maxlength="32" type="password"/>
+    <input type="hidden" id="password-room-id"/>
+    <div class="flex gap-2 mt-1">
+      <button class="flex-1 bg-white/5 border border-squawk-border rounded-xl text-squawk-text-mid text-[13px] font-bold py-3 cursor-pointer transition-all hover:border-squawk-border2 hover:text-squawk-text" id="cancel-password">取消</button>
+      <button class="flex-1 bg-squawk-blue text-white text-[13px] font-bold border-none rounded-xl py-3 cursor-pointer transition-all hover:bg-squawk-blue2 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-squawk-blue-glow" id="confirm-password">加入 →</button>
     </div>
   </div>
 </div>
@@ -757,7 +775,14 @@ socket.on('room-list',rooms=>{
     el.className='room-item py-2 px-3 cursor-pointer flex items-center gap-2.5'+(currentRoom===room.id?' active':''); el.dataset.roomId=room.id; el.dataset.owner=room.owner||'';
     const privateIcon=room.isPrivate?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="inline ml-1 text-squawk-red"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>':'';
     el.innerHTML=`${avatarHtml(room.name)}<div class="flex-1 min-w-0"><div class="room-name text-[13px] font-medium truncate" style="color:var(--text)">${escHtml(room.name)}${privateIcon}</div><div class="room-count text-[11px] truncate" style="color:var(--text-dim)">${room.count} 在线</div></div><div class="room-badge">${room.count}</div>`;
-    el.addEventListener('click',()=>{if(!userName)return toast('请先设置昵称','error');$('sidebar').classList.remove('open');joinRoom(room.id);});
+    el.addEventListener('click',()=>{
+      if(!userName)return toast('请先设置昵称','error');
+      if(room.isPrivate&&room.hasPassword&&room.owner!==userName){
+        promptPassword(room.id);
+      } else {
+        $('sidebar').classList.remove('open');joinRoom(room.id);
+      }
+    });
     el.addEventListener('contextmenu',e=>{
       e.preventDefault();
       if(room.owner!==userName)return;
@@ -781,25 +806,48 @@ $('open-create-modal').addEventListener('click',()=>{if(!userName)return toast('
 $('cancel-create').addEventListener('click',()=>createModal.classList.add('hidden'));
 $('confirm-create').addEventListener('click',createRoom);
 newRoomInput.addEventListener('keydown',e=>{if(e.key==='Enter')createRoom();});
+$('private-checkbox').addEventListener('change',function(){$('password-wrap').classList.toggle('hidden',!this.checked);});
 function createRoom(){
   const name=newRoomInput.value.trim(); if(!name)return toast('请输入频道名称','error');
   const defaultMuted=$('default-muted-checkbox').checked;
   const isPrivate=$('private-checkbox').checked;
-  socket.emit('create-room',{roomName:name,defaultMuted,isPrivate},res=>{
+  const password=isPrivate?$('new-room-password').value.trim():'';
+  socket.emit('create-room',{roomName:name,defaultMuted,isPrivate,password},res=>{
     if(res.error)return toast(res.error,'error');
-    createModal.classList.add('hidden'); newRoomInput.value=''; $('default-muted-checkbox').checked=false; $('private-checkbox').checked=false; joinRoom(name);
+    createModal.classList.add('hidden'); newRoomInput.value=''; $('new-room-password').value=''; $('default-muted-checkbox').checked=false; $('private-checkbox').checked=false; $('password-wrap').classList.add('hidden'); joinRoom(name,password);
   });
 }
 
+// ── 密码验证 ──
+function promptPassword(roomId){
+  $('password-room-id').value=roomId;
+  $('password-input').value='';
+  $('password-modal').classList.remove('hidden');
+  $('password-input').focus();
+}
+$('cancel-password').addEventListener('click',()=>$('password-modal').classList.add('hidden'));
+$('confirm-password').addEventListener('click',()=>{
+  const roomId=$('password-room-id').value;
+  const password=$('password-input').value.trim();
+  if(!password)return toast('请输入密码','error');
+  $('password-modal').classList.add('hidden');
+  $('sidebar').classList.remove('open');
+  joinRoom(roomId,password);
+});
+$('password-input').addEventListener('keydown',e=>{if(e.key==='Enter')$('confirm-password').click();});
+$('password-modal').addEventListener('click',e=>{if(e.target===$('password-modal'))$('password-modal').classList.add('hidden');});
+
 // ── 加入频道 ──
-async function joinRoom(roomId){
+async function joinRoom(roomId, password){
   if(currentRoom===roomId)return;
   if(!localStream){
     try{localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});setupSelfAnalyser(localStream);}
     catch{toast('麦克风访问被拒绝','error');return;}
   }
   if(currentRoom)leaveRoom();
-  socket.emit('join-room',{roomId,userName});
+  socket.emit('join-room',{roomId,userName,password:password||''},(res)=>{
+    if(res&&res.error){toast(res.error,'error');currentRoom=null;}
+  });
   currentRoom=roomId;
   $('current-room-name').textContent=roomId;
   roomScreen.classList.remove('hidden'); roomScreen.classList.add('flex'); welcomeScreen.style.display='none';

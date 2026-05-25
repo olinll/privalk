@@ -20,6 +20,7 @@ export interface Room {
   owner: string | null;
   defaultMuted: boolean;
   isPrivate: boolean;
+  password: string | null;
 }
 
 export interface Message {
@@ -76,6 +77,7 @@ interface ChannelMeta {
   defaultMuted: boolean;
   isPrivate: boolean;
   owner: string | null;
+  password: string | null;
 }
 
 function loadChannels(): ChannelMeta[] {
@@ -86,8 +88,8 @@ function loadChannels(): ChannelMeta[] {
     // 兼容旧格式（纯字符串数组）
     return raw
       .map(n => {
-        if (typeof n === "string") return { name: sanitiseRoomName(n), defaultMuted: false, isPrivate: false, owner: null };
-        return { name: sanitiseRoomName(n.name), defaultMuted: !!n.defaultMuted, isPrivate: !!n.isPrivate, owner: n.owner || null };
+        if (typeof n === "string") return { name: sanitiseRoomName(n), defaultMuted: false, isPrivate: false, owner: null, password: null };
+        return { name: sanitiseRoomName(n.name), defaultMuted: !!n.defaultMuted, isPrivate: !!n.isPrivate, owner: n.owner || null, password: n.password || null };
       })
       .filter((n): n is ChannelMeta => n.name !== null)
       .slice(0, MAX_ROOMS);
@@ -104,6 +106,7 @@ export function saveChannels(): void {
       defaultMuted: room.defaultMuted,
       isPrivate: room.isPrivate,
       owner: room.owner,
+      password: room.password,
     }));
     fs.writeFileSync(CHANNELS_FILE, JSON.stringify(data, null, 2));
   } catch (e: unknown) {
@@ -167,7 +170,7 @@ export function markChannelDeleted(name: string): void {
 
 // 初始化加载频道和消息
 for (const meta of loadChannels()) {
-  rooms[meta.name] = { users: new Map(), messages: loadChannelChat(meta.name), owner: meta.owner, defaultMuted: meta.defaultMuted, isPrivate: meta.isPrivate };
+  rooms[meta.name] = { users: new Map(), messages: loadChannelChat(meta.name), owner: meta.owner, defaultMuted: meta.defaultMuted, isPrivate: meta.isPrivate, password: meta.password };
   typingUsers[meta.name] = new Set();
 }
 console.log(`[~] 已加载 ${Object.keys(rooms).length} 个频道:`, Object.keys(rooms));
@@ -179,6 +182,7 @@ export function getRoomList() {
     owner: room.owner,
     defaultMuted: room.defaultMuted,
     isPrivate: room.isPrivate,
+    hasPassword: !!room.password,
   }));
 }
 
