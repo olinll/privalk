@@ -354,57 +354,9 @@
           <button class="w-[38px] h-[38px] rounded-xl border border-squawk-border bg-squawk-bg3 text-squawk-text-mid cursor-pointer flex items-center justify-center transition-all hover:border-squawk-blue hover:text-squawk-blue hover:bg-squawk-blue-soft disabled:opacity-20 disabled:cursor-not-allowed shrink-0" id="file-btn" disabled title="发送文件">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           </button>
-          <div class="relative shrink-0">
-          <button class="w-[38px] h-[38px] rounded-xl border border-squawk-border bg-squawk-bg3 text-squawk-text-mid cursor-pointer flex items-center justify-center transition-all hover:border-squawk-blue hover:text-squawk-blue hover:bg-squawk-blue-soft disabled:opacity-20 disabled:cursor-not-allowed" id="emoji-btn" disabled title="表情">
+          <button class="w-[38px] h-[38px] rounded-xl border border-squawk-border bg-squawk-bg3 text-squawk-text-mid cursor-pointer flex items-center justify-center transition-all hover:border-squawk-blue hover:text-squawk-blue hover:bg-squawk-blue-soft disabled:opacity-20 disabled:cursor-not-allowed shrink-0" id="emoji-btn" disabled title="表情">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
           </button>
-          <!-- 表情选择器弹出框 -->
-          <div class="hidden absolute bottom-full left-0 mb-2 bg-squawk-bg3 border border-squawk-border2 rounded-xl p-2.5 w-[280px] shadow-xl shadow-black/30 z-[100]" id="emoji-popover">
-            <div class="grid grid-cols-7 gap-1 max-h-[200px] overflow-y-auto pr-1 emoji-scroll">
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😀')">😀</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😂')">😂</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😍')">😍</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🤔')">🤔</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😎')">😎</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🥳')">🥳</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😴')">😴</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😭')">😭</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😡')">😡</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🥺')">🥺</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🤡')">🤡</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('💀')">💀</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('👻')">👻</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎃')">🎃</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🔥')">🔥</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('❤️')">❤️</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('👍')">👍</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('👎')">👎</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('👋')">👋</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🤝')">🤝</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('✌️')">✌️</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🤞')">🤞</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('💪')">💪</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎉')">🎉</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎮')">🎮</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertDice('🎲')">🎲</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🏆')">🏆</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('💯')">💯</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('⚡')">⚡</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎵')">🎵</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎬')">🎬</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('📱')">📱</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('💻')">💻</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎧')">🎧</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎤')">🎤</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('📹')">📹</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🍕')">🍕</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🍺')">🍺</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('☕')">☕</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🐱')">🐱</button>
-              <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🐶')">🐶</button>
-            </div>
-          </div>
-          </div>
           <textarea id="chat-input" class="flex-1 bg-white/5 border border-squawk-border2 rounded-xl py-2.5 px-4 text-squawk-text text-[13px] font-medium outline-none resize-none max-h-[100px] transition-all focus:border-squawk-blue focus:shadow-[0_0_0_3px_var(--tw-color-squawk-blue-soft)] leading-relaxed disabled:opacity-30 disabled:cursor-not-allowed placeholder:text-squawk-text-dim placeholder:font-normal" placeholder="发送消息..." rows="1" disabled></textarea>
           <button class="w-[38px] h-[38px] rounded-xl bg-squawk-blue border-none text-white cursor-pointer flex items-center justify-center transition-all shadow-md shadow-squawk-blue-glow shrink-0 hover:bg-squawk-blue2 hover:scale-105 disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none" id="send-btn" disabled title="发送">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
@@ -531,6 +483,53 @@
   </button>
   <img id="lightbox-img" class="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl select-none" alt="预览">
   <div class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs py-1.5 px-3 rounded-full font-medium" id="lightbox-info"></div>
+</div>
+
+<!-- 表情选择器弹出框 -->
+<div class="hidden fixed bg-squawk-bg3 border border-squawk-border2 rounded-xl p-2.5 w-[280px] shadow-xl shadow-black/30 z-[100]" id="emoji-popover">
+  <div class="grid grid-cols-7 gap-1 max-h-[200px] overflow-y-auto pr-1 emoji-scroll">
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😀')">😀</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😂')">😂</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😍')">😍</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🤔')">🤔</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😎')">😎</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🥳')">🥳</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😴')">😴</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😭')">😭</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('😡')">😡</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🥺')">🥺</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🤡')">🤡</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('💀')">💀</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('👻')">👻</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎃')">🎃</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🔥')">🔥</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('❤️')">❤️</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('👍')">👍</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('👎')">👎</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('👋')">👋</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🤝')">🤝</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('✌️')">✌️</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🤞')">🤞</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('💪')">💪</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎉')">🎉</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎮')">🎮</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertDice('🎲')">🎲</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🏆')">🏆</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('💯')">💯</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('⚡')">⚡</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎵')">🎵</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎬')">🎬</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('📱')">📱</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('💻')">💻</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎧')">🎧</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🎤')">🎤</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('📹')">📹</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🍕')">🍕</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🍺')">🍺</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('☕')">☕</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🐱')">🐱</button>
+    <button class="text-xl p-1.5 rounded-lg hover:bg-squawk-card-hover cursor-pointer transition-colors" onclick="insertEmoji('🐶')">🐶</button>
+  </div>
 </div>
 
 <div id="toast-container" class="fixed bottom-[84px] right-[18px] flex flex-col gap-2 z-[2000] pointer-events-none"></div>
@@ -1122,7 +1121,13 @@ const emojiBtn = $('emoji-btn');
 emojiBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   if (!currentRoom) return toast('请先加入频道', 'error');
+  const isHidden = emojiPopover.classList.contains('hidden');
   emojiPopover.classList.toggle('hidden');
+  if (isHidden) {
+    const rect = emojiBtn.getBoundingClientRect();
+    emojiPopover.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+    emojiPopover.style.left = rect.left + 'px';
+  }
 });
 
 document.addEventListener('click', (e) => {
