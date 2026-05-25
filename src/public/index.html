@@ -566,7 +566,7 @@ function applyTheme(theme){
   else{document.documentElement.classList.remove('light');themeBtn.innerHTML=MOON_SVG;}
   localStorage.setItem('privalk-theme',theme);
 }
-applyTheme(localStorage.getItem('privalk-theme')||'dark');
+applyTheme(localStorage.getItem('privalk-theme')||(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'));
 themeBtn.addEventListener('click',()=>{
   const isLight=document.documentElement.classList.contains('light');
   applyTheme(isLight?'dark':'light');
