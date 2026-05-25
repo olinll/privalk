@@ -17,11 +17,14 @@ Privalk 反其道而行。你托管它。你控制它。你的朋友通过你的
 - **完全私密** — 只有你邀请的人才能通过 Tailscale VPN 访问
 - **自托管** — 运行在你的机器、Proxmox 服务器或任何 Linux 主机上
 - **为游戏而生** — 低延迟 WebRTC 音频，永久在线频道
-- **语音 + 文字** — 在语音频道旁边聊天，带有输入指示器
+- **语音 + 文字** — 在语音频道旁边聊天，支持 Markdown 渲染
 - **频道所有权** — 踢出用户、重命名和删除频道、管理你的空间
 - **支持移动端** — 响应式布局，带语音/聊天标签切换
 - **声音通知** — 加入、离开和消息的微妙音频提示
-- **文件分享** — 支持发送图片、视频、文件
+- **文件分享** — 支持发送图片、视频、文件（最大 50MB）
+- **粘贴上传** — 在聊天输入框中粘贴图片自动上传
+- **亮色/暗色主题** — 自动检测系统主题，支持手动切换
+- **消息持久化** — 每个频道独立存储聊天记录，重启不丢失
 
 ---
 
@@ -32,8 +35,8 @@ Privalk 反其道而行。你托管它。你控制它。你的朋友通过你的
 需要 [Node.js 18+](https://nodejs.org)。
 
 ```bash
-git clone https://github.com/your-username/squawk.git
-cd squawk
+git clone https://github.com/your-username/privalk.git
+cd privalk
 npm install
 npm run build
 npm start
@@ -42,7 +45,7 @@ npm start
 要让 Privalk 在后台运行：
 ```bash
 npm install -g pm2
-pm2 start dist/server.js --name squawk
+pm2 start dist/index.js --name privalk
 pm2 save && pm2 startup
 ```
 
@@ -72,10 +75,10 @@ mkcert -install
 mkcert -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 YOUR_TAILSCALE_IP
 ```
 
-然后更新 `server.js` 使用 HTTPS：
-```js
-const https = require("https");
-const fs = require("fs");
+然后更新服务器使用 HTTPS：
+```typescript
+import https from "https";
+import fs from "fs";
 
 const server = https.createServer({
   key: fs.readFileSync("key.pem"),
@@ -85,7 +88,25 @@ const server = https.createServer({
 
 ---
 
-## 频道权限
+## 功能特性
+
+### Markdown 支持
+
+聊天消息支持 Markdown 语法渲染：
+
+| 语法 | 效果 |
+|------|------|
+| `**粗体**` | **粗体** |
+| `*斜体*` | *斜体* |
+| `` `代码` `` | `代码` |
+| ` ```代码块``` ` | 代码块 |
+| `[链接](url)` | 链接 |
+| `![图片](url)` | 图片 |
+| `> 引用` | 引用 |
+| `- 列表` | 列表 |
+| `~~删除线~~` | ~~删除线~~ |
+
+### 频道权限
 
 创建频道的人就是**频道主**，用 👑 皇冠标识。如果频道主离开，所有权会转移给下一个人。
 
@@ -102,6 +123,21 @@ const server = https.createServer({
 - **桌面端** — 右键点击侧边栏中的频道进行重命名或删除。右键点击用户磁贴进行踢出。
 - **移动端** — 长按频道或用户磁贴。
 
+### 创建频道默认静音
+
+创建频道时可勾选"加入时默认静音"，新成员加入时自动静音。
+
+### 主题切换
+
+- 首次访问自动检测系统主题（亮色/暗色）
+- 右上角按钮手动切换，偏好自动保存
+
+### 侧边栏折叠
+
+- 频道列表和成员面板支持向左折叠
+- 折叠后显示首字母头像
+- 折叠状态自动保存
+
 ---
 
 ## 配置
@@ -111,7 +147,7 @@ const server = https.createServer({
 | `PORT` | `3000` | 服务器监听端口 |
 | `NODE_ENV` | `development` | 生产环境设置为 `production` |
 
-你可以在 `src/server.ts` 顶部调整这些限制：
+你可以在 `src/services/room.service.ts` 和 `src/services/chat.service.ts` 中调整这些限制：
 
 | 常量 | 默认值 | 描述 |
 |------|--------|------|
@@ -146,6 +182,8 @@ Privalk 以隐私和安全为首要原则：
 | 语音 | WebRTC（浏览器原生） |
 | 前端 | Vanilla HTML / Tailwind CSS / JS |
 | 类型系统 | TypeScript |
+| 文件上传 | Multer（最大 50MB） |
+| 持久化 | JSON 文件存储 |
 
 无数据库。无外部服务。无遥测。
 
@@ -154,14 +192,25 @@ Privalk 以隐私和安全为首要原则：
 ## 项目结构
 
 ```
-squawk/
+privalk/
 ├── src/
-│   ├── server.ts          # 服务器端代码
+│   ├── index.ts              # 服务器入口
+│   ├── routes/
+│   │   └── upload.route.ts   # 文件上传路由
+│   ├── services/
+│   │   ├── room.service.ts   # 频道管理
+│   │   ├── chat.service.ts   # 聊天功能
+│   │   └── file.service.ts   # 文件服务
 │   └── public/
-│       ├── index.html     # 前端界面
-│       └── favicon.svg    # 网站图标
-├── dist/                  # 编译输出（自动生成）
-├── uploads/               # 上传文件存储
+│       ├── index.html        # 前端界面
+│       ├── favicon.svg       # 网站图标
+│       └── js/
+│           └── tailwind.js   # Tailwind CSS
+├── data/                     # 持久化数据
+│   ├── channels.json         # 频道列表
+│   └── chat/                 # 每个频道的聊天记录
+├── dist/                     # 编译输出（自动生成）
+├── uploads/                  # 上传文件存储
 ├── package.json
 ├── tsconfig.json
 └── README.md
