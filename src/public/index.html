@@ -64,14 +64,52 @@
     }
   </script>
   <style>
+    :root {
+      --bg: #0b0d14; --bg2: #10121a; --bg3: #161922;
+      --card: rgba(255,255,255,0.04); --card-hover: rgba(255,255,255,0.07);
+      --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+      --text: #ffffff; --text-mid: #8b8fa8; --text-dim: #4a4d62;
+      --glow-opacity: 0.3; --shadow-strength: 0.5;
+      --input-bg: rgba(255,255,255,0.05);
+    }
+    .light {
+      --bg: #f8fafc; --bg2: #f1f5f9; --bg3: #ffffff;
+      --card: rgba(0,0,0,0.03); --card-hover: rgba(0,0,0,0.06);
+      --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.12);
+      --text: #0f172a; --text-mid: #475569; --text-dim: #94a3b8;
+      --glow-opacity: 0.15; --shadow-strength: 0.15;
+      --input-bg: rgba(0,0,0,0.04);
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height:100%; overflow:hidden; }
+    body { background: var(--bg); color: var(--text); }
     body::before {
       content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
       background:
         radial-gradient(ellipse 60% 40% at 80% 10%, rgba(79,125,255,0.08) 0%, transparent 60%),
         radial-gradient(ellipse 50% 40% at 20% 80%, rgba(79,125,255,0.05) 0%, transparent 60%);
     }
+    .light body::before {
+      background:
+        radial-gradient(ellipse 60% 40% at 80% 10%, rgba(79,125,255,0.04) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 20% 80%, rgba(79,125,255,0.02) 0%, transparent 60%);
+    }
+    /* 主题变量覆盖 Tailwind 颜色 */
+    .light .bg-squawk-bg { background-color: var(--bg) !important; }
+    .light .bg-squawk-bg2 { background-color: var(--bg2) !important; }
+    .light .bg-squawk-bg3 { background-color: var(--bg3) !important; }
+    .light .bg-squawk-card { background-color: var(--card) !important; }
+    .light .bg-squawk-card-hover { background-color: var(--card-hover) !important; }
+    .light .border-squawk-border { border-color: var(--border) !important; }
+    .light .border-squawk-border2 { border-color: var(--border2) !important; }
+    .light .text-squawk-text { color: var(--text) !important; }
+    .light .text-squawk-text-mid { color: var(--text-mid) !important; }
+    .light .text-squawk-text-dim { color: var(--text-dim) !important; }
+    .light .bg-white\/5 { background-color: var(--input-bg) !important; }
+    .light .bg-black\/60 { background-color: rgba(0,0,0,0.3) !important; }
+    .light .shadow-black\/50 { --tw-shadow-color: rgba(0,0,0,0.2) !important; }
+    .light .shadow-black\/30 { --tw-shadow-color: rgba(0,0,0,0.1) !important; }
+    .light .shadow-black\/40 { --tw-shadow-color: rgba(0,0,0,0.15) !important; }
     #app { display:grid; grid-template-columns:240px 1fr; grid-template-rows:64px 1fr 72px; height:100vh; position:relative; z-index:1; grid-template-areas:"header header" "sidebar main" "controls controls"; }
     #sidebar { grid-area:sidebar; }
     #main { grid-area:main; }
@@ -105,6 +143,7 @@
       <div class="text-lg font-extrabold tracking-tight">Privalk</div>
     </div>
     <div class="ml-auto flex items-center gap-2.5">
+      <button class="w-9 h-9 rounded-xl bg-squawk-bg3 border border-squawk-border text-squawk-text-mid text-base cursor-pointer flex items-center justify-center transition-all hover:border-squawk-blue hover:text-squawk-blue" id="theme-btn" title="切换主题">🌙</button>
       <div class="flex items-center gap-1.5 bg-squawk-card border border-squawk-border rounded-full py-1 px-3 text-[11px] font-semibold text-squawk-text-mid">
         <div class="w-1.5 h-1.5 rounded-full bg-squawk-green shadow-[0_0_6px_var(--tw-color-squawk-green)] animate-pulse-dot"></div>
         <span id="conn-status">连接中</span>
@@ -372,6 +411,19 @@ saveNameBtn.addEventListener('click',()=>{const n=nameInput.value.trim();if(!n)r
 nameInput.addEventListener('keydown',e=>{if(e.key==='Enter')saveNameBtn.click();});
 $('menu-btn').addEventListener('click',()=>$('sidebar').classList.toggle('open'));
 
+// ── 主题切换 ──
+const themeBtn=$('theme-btn');
+function applyTheme(theme){
+  if(theme==='light'){document.documentElement.classList.add('light');themeBtn.textContent='☀️';}
+  else{document.documentElement.classList.remove('light');themeBtn.textContent='🌙';}
+  localStorage.setItem('privalk-theme',theme);
+}
+applyTheme(localStorage.getItem('privalk-theme')||'dark');
+themeBtn.addEventListener('click',()=>{
+  const isLight=document.documentElement.classList.contains('light');
+  applyTheme(isLight?'dark':'light');
+});
+
 // ── 右键菜单 ──
 let ctxRoomId=null, ctxTargetSocketId=null, ctxTargetName=null, longPressTimer=null;
 
@@ -606,6 +658,20 @@ chatInput.addEventListener('input',()=>{
   chatInput.style.height='auto'; chatInput.style.height=Math.min(chatInput.scrollHeight,100)+'px';
   if(!isTypingNow){isTypingNow=true;socket.emit('typing',{isTyping:true});}
   clearTimeout(typingTimer); typingTimer=setTimeout(stopTyping,2000);
+});
+chatInput.addEventListener('paste',(e)=>{
+  const items=e.clipboardData?.items;if(!items)return;
+  for(const item of items){
+    if(item.type.startsWith('image/')){
+      e.preventDefault();
+      const file=item.getAsFile();
+      if(file){
+        if(file.size>50*1024*1024){toast('文件太大（最大50MB）','error');return;}
+        uploadFile(file);
+      }
+      return;
+    }
+  }
 });
 function stopTyping(){if(isTypingNow){isTypingNow=false;socket.emit('typing',{isTyping:false});}clearTimeout(typingTimer);}
 
