@@ -483,6 +483,15 @@
   </div>
 </div>
 
+<!-- 图片灯箱 -->
+<div class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[3000] cursor-zoom-out backdrop-blur-[6px]" id="lightbox">
+  <button class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 border-none text-white cursor-pointer flex items-center justify-center hover:bg-white/20 transition-all z-10" id="lightbox-close" title="关闭 (Esc)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <img id="lightbox-img" class="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl select-none" alt="预览">
+  <div class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs py-1.5 px-3 rounded-full font-medium" id="lightbox-info"></div>
+</div>
+
 <div id="toast-container" class="fixed bottom-[84px] right-[18px] flex flex-col gap-2 z-[2000] pointer-events-none"></div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -542,7 +551,7 @@ function renderMd(text){
   // 链接
   s=s.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" class="text-squawk-blue underline hover:text-squawk-blue2">$1</a>');
   // 图片 ![alt](url)
-  s=s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1" class="max-w-[300px] max-h-[200px] rounded-xl object-cover cursor-pointer mt-1" onclick="window.open(this.src)">');
+  s=s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1" class="max-w-[300px] max-h-[200px] rounded-xl object-cover cursor-pointer mt-1">');
   // 无序列表
   s=s.replace(/(^|\n)[-*] (.+?)(?=\n|$)/g,'$1<li class="ml-4 list-disc">$2</li>');
   // 引用
@@ -811,7 +820,7 @@ function renderMessage(msg){
     const isImage = msg.fileType && msg.fileType.startsWith('image/');
     const isVideo = msg.fileType && msg.fileType.startsWith('video/');
     if(isImage) {
-      content = `<img src="${escHtml(msg.fileUrl)}" class="max-w-[300px] max-h-[200px] rounded-xl object-cover cursor-pointer" onclick="window.open(this.src)">`;
+      content = `<img src="${escHtml(msg.fileUrl)}" class="max-w-[300px] max-h-[200px] rounded-xl object-cover cursor-pointer" alt="${escHtml(msg.fileName||'图片')}">`;
     } else if(isVideo) {
       content = `<video src="${escHtml(msg.fileUrl)}" class="max-w-[300px] max-h-[200px] rounded-xl" controls></video>`;
     } else {
@@ -1099,6 +1108,37 @@ function insertEmoji(emoji) {
 
   emojiModal.classList.add('hidden');
 }
+
+// ── 图片灯箱 ──
+const lightbox = $('lightbox');
+const lightboxImg = $('lightbox-img');
+const lightboxInfo = $('lightbox-info');
+
+function openLightbox(src, info) {
+  lightboxImg.src = src;
+  lightboxInfo.textContent = info || '';
+  lightbox.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  lightbox.classList.add('hidden');
+  lightboxImg.src = '';
+  document.body.style.overflow = '';
+}
+
+$('lightbox-close').addEventListener('click', (e) => { e.stopPropagation(); closeLightbox(); });
+lightbox.addEventListener('click', (e) => { if (e.target === lightbox || e.target === lightboxImg) closeLightbox(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !lightbox.classList.contains('hidden')) closeLightbox(); });
+
+// 代理聊天消息中的图片点击
+chatMessages.addEventListener('click', (e) => {
+  const img = e.target.closest('img');
+  if (img && img.src && !img.closest('a')) {
+    e.preventDefault();
+    openLightbox(img.src, img.alt || '');
+  }
+});
 
 // ── 启用/禁用按钮 ──
 function updateChatButtons() {
