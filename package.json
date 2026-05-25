@@ -4,7 +4,7 @@
   "description": "私密语音和文字聊天应用，支持文件分享",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc && xcopy /E /I /Y src\\public dist\\public",
+    "build": "tsc && shx cp -r src/public dist/public",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "watch": "tsc --watch"
@@ -19,7 +19,8 @@
     "@types/multer": "^1.4.11",
     "@types/node": "^20.11.5",
     "typescript": "^5.3.3",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "shx": "^0.3.4"
   }
 }
 
